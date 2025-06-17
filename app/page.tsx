@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { SessionHistory } from "@/lib/session-history"
 import { StatCardHistoryChart } from "@/components/history-chart"
 import { LoadingCard } from "@/components/loading-card"
+import { formatVersionInfo, getCopyrightYears } from "@/lib/version"
 
 interface WebsiteStats {
   id: string
@@ -722,6 +723,18 @@ export default function UmamiDashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Version Info Footer */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="text-center space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {formatVersionInfo()}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {getCopyrightYears()} Umami-Dashboard
+          </p>
+        </div>
       </div>
     </div>
   )
