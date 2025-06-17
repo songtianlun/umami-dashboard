@@ -38,6 +38,8 @@ docker run -p 3000:3000 songtianlun/umami-dashboard:latest
 | `UMAMI_SERVER_URL` | Umami 服务器地址 | `https://analytics.yoursite.com` |
 | `UMAMI_USERNAME` | Umami 登录用户名 | `admin` |
 | `UMAMI_PASSWORD` | Umami 登录密码 | `your-password` |
+| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami 统计脚本 URL | `https://umami.frytea.com/script.js` |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami 网站 ID | `f7438333-3487-4446-bdb9-c47b35016ccf` |
 
 ### 环境变量使用示例
 
@@ -77,6 +79,14 @@ services:
 UMAMI_SERVER_URL=https://analytics.yoursite.com
 UMAMI_USERNAME=admin
 UMAMI_PASSWORD=your-password
+
+# Umami 统计脚本配置（选择一种方法）
+# 方法一：完整脚本标签（推荐）
+NEXT_PUBLIC_ANALYTICS_SCRIPT='<script defer src="https://umami.frytea.com/script.js" data-website-id="f7438333-3487-4446-bdb9-c47b35016ccf"></script>'
+
+# 方法二：分别配置（如果使用方法一则注释掉以下两行）
+# NEXT_PUBLIC_UMAMI_ANALYTICS_URL=https://umami.frytea.com/script.js
+# NEXT_PUBLIC_UMAMI_WEBSITE_ID=f7438333-3487-4446-bdb9-c47b35016ccf
 ```
 
 ## 开发环境启动

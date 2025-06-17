@@ -38,6 +38,8 @@ For better deployment experience, this application supports pre-setting configur
 | `UMAMI_SERVER_URL` | Umami server address | `https://analytics.yoursite.com` |
 | `UMAMI_USERNAME` | Umami login username | `admin` |
 | `UMAMI_PASSWORD` | Umami login password | `your-password` |
+| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami analytics script URL | `https://umami.frytea.com/script.js` |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami website ID | `f7438333-3487-4446-bdb9-c47b35016ccf` |
 
 ### Environment Variable Usage Examples
 
@@ -77,6 +79,14 @@ Create `.env.local` file:
 UMAMI_SERVER_URL=https://analytics.yoursite.com
 UMAMI_USERNAME=admin
 UMAMI_PASSWORD=your-password
+
+# Umami Analytics Script Configuration (choose one method)
+# Method 1: Complete script tag (recommended)
+NEXT_PUBLIC_ANALYTICS_SCRIPT='<script defer src="https://umami.frytea.com/script.js" data-website-id="f7438333-3487-4446-bdb9-c47b35016ccf"></script>'
+
+# Method 2: Separate configuration (comment out the following two lines if using method 1)
+# NEXT_PUBLIC_UMAMI_ANALYTICS_URL=https://umami.frytea.com/script.js
+# NEXT_PUBLIC_UMAMI_WEBSITE_ID=f7438333-3487-4446-bdb9-c47b35016ccf
 ```
 
 ## Development Environment Setup
