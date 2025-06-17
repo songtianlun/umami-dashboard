@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ github.event.repository.name }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
   USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
