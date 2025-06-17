@@ -9,6 +9,7 @@ import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCir
 import { cn } from "@/lib/utils"
 import { LoginConfigDialog } from "@/components/login-config"
 import { AutoRefreshConfig } from "@/components/auto-refresh-config"
+import { RealtimeTest } from "@/components/realtime-test"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -56,8 +57,20 @@ export default function UmamiDashboard() {
   const [statusMessage, setStatusMessage] = useState<string>("")
   const { toast } = useToast()
 
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = async (showToast: boolean = true) => {
+    // Only show toast notification, don't set loading state immediately
+    if (showToast) {
+      toast({
+        title: "正在获取最新数据",
+        description: "正在从服务器获取最新统计数据...",
+      })
+    }
+
+    // Set loading state only after a short delay
+    const loadingTimeout = setTimeout(() => {
+      setLoading(true)
+    }, 500)
+
     try {
       const headers: HeadersInit = {}
 
@@ -69,6 +82,9 @@ export default function UmamiDashboard() {
       const response = await fetch("/api/umami/stats", { headers })
       const data = await response.json()
 
+      // Clear the loading timeout since we got a response
+      clearTimeout(loadingTimeout)
+
       // Sort by current online visitors (descending)
       const sortedWebsites = data.websites.sort((a: WebsiteStats, b: WebsiteStats) => b.currentOnline - a.currentOnline)
 
@@ -77,22 +93,34 @@ export default function UmamiDashboard() {
       setDataSource(data.source)
       setStatusMessage(data.message || data.error || "")
       setLastUpdated(new Date())
+      setLoading(false)
 
-      if (data.source === "umami") {
-        toast({
-          title: "数据更新成功",
-          description: `成功获取 ${data.websites.length} 个网站的数据`,
-        })
+      if (showToast) {
+        if (data.source === "umami") {
+          toast({
+            title: "数据更新成功",
+            description: `成功获取 ${data.websites.length} 个网站的实时数据`,
+          })
+        } else {
+          toast({
+            title: "使用演示数据",
+            description: data.message || "请配置 Umami 连接以获取真实数据",
+            variant: "secondary",
+          })
+        }
       }
     } catch (error) {
       console.error("Failed to fetch data:", error)
-      toast({
-        title: "数据获取失败",
-        description: "无法获取统计数据，请检查网络连接",
-        variant: "destructive",
-      })
-    } finally {
+      clearTimeout(loadingTimeout)
       setLoading(false)
+
+      if (showToast) {
+        toast({
+          title: "数据获取失败",
+          description: "无法获取统计数据，请检查网络连接",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -115,12 +143,12 @@ export default function UmamiDashboard() {
   }, [])
 
   useEffect(() => {
-    fetchData()
+    fetchData(false) // Don't show toast on initial load
   }, [config])
 
   useEffect(() => {
     if (refreshInterval > 0) {
-      const interval = setInterval(fetchData, refreshInterval)
+      const interval = setInterval(() => fetchData(false), refreshInterval) // Don't show toast on auto-refresh
       return () => clearInterval(interval)
     }
   }, [refreshInterval, config])
@@ -183,9 +211,9 @@ export default function UmamiDashboard() {
               onIntervalChange={handleRefreshIntervalChange}
             />
             <LoginConfigDialog onConfigSave={handleConfigSave} />
-            <Button onClick={fetchData} disabled={loading} variant="outline" size="sm">
+            <Button onClick={() => fetchData(true)} disabled={loading} variant="outline" size="sm">
               <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-              刷新数据
+              {loading ? "刷新中..." : "刷新数据"}
             </Button>
           </div>
         </div>
@@ -258,6 +286,11 @@ export default function UmamiDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Debug/Test Section - only show if using demo data */}
+        {dataSource === "mock" && config && (
+          <RealtimeTest config={config} />
+        )}
 
         {/* Websites Table */}
         <Card>
