@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Timer, Save } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useI18n } from "./i18n-provider"
 
 interface AutoRefreshConfigProps {
     currentInterval: number
@@ -14,36 +15,37 @@ interface AutoRefreshConfigProps {
     trigger?: React.ReactNode
 }
 
-const REFRESH_OPTIONS = [
-    { value: 10000, label: "10 秒" },
-    { value: 30000, label: "30 秒" },
-    { value: 60000, label: "1 分钟" },
-    { value: 300000, label: "5 分钟" },
-    { value: 600000, label: "10 分钟" },
-    { value: 0, label: "禁用自动刷新" },
-]
-
 export function AutoRefreshConfig({ currentInterval, onIntervalChange, trigger }: AutoRefreshConfigProps) {
+    const { t } = useI18n()
     const [isOpen, setIsOpen] = useState(false)
     const [selectedInterval, setSelectedInterval] = useState(currentInterval)
     const { toast } = useToast()
+
+    const getRefreshOptions = () => [
+        { value: 10000, label: `10 ${t('seconds')}` },
+        { value: 30000, label: `30 ${t('seconds')}` },
+        { value: 60000, label: `1 ${t('minute')}` },
+        { value: 300000, label: `5 ${t('minutes')}` },
+        { value: 600000, label: `10 ${t('minutes')}` },
+        { value: 0, label: t('disableAutoRefresh') },
+    ]
 
     const handleSave = () => {
         onIntervalChange(selectedInterval)
         localStorage.setItem("umami-refresh-interval", selectedInterval.toString())
 
-        const option = REFRESH_OPTIONS.find(opt => opt.value === selectedInterval)
+        const option = getRefreshOptions().find(opt => opt.value === selectedInterval)
         toast({
-            title: "刷新间隔已更新",
-            description: `自动刷新已设置为 ${option?.label}`,
+            title: t('refreshIntervalUpdated'),
+            description: t('autoRefreshSetTo', { interval: option?.label || t('disable') }),
         })
 
         setIsOpen(false)
     }
 
     const getCurrentIntervalLabel = () => {
-        const option = REFRESH_OPTIONS.find(opt => opt.value === currentInterval)
-        return option?.label || "未知"
+        const option = getRefreshOptions().find(opt => opt.value === currentInterval)
+        return option?.label || t('disable')
     }
 
     return (
@@ -52,23 +54,23 @@ export function AutoRefreshConfig({ currentInterval, onIntervalChange, trigger }
                 {trigger || (
                     <Button variant="outline" size="sm">
                         <Timer className="h-4 w-4 mr-2" />
-                        自动刷新: {getCurrentIntervalLabel()}
+                        {t('autoRefreshSettings')}: {getCurrentIntervalLabel()}
                     </Button>
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
-                    <DialogTitle>自动刷新设置</DialogTitle>
+                    <DialogTitle>{t('autoRefreshSettings')}</DialogTitle>
                     <DialogDescription>
-                        设置面板数据的自动刷新间隔时间
+                        {t('refreshIntervalDescription')}
                     </DialogDescription>
                 </DialogHeader>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg">刷新间隔</CardTitle>
+                        <CardTitle className="text-lg">{t('refreshInterval')}</CardTitle>
                         <CardDescription>
-                            选择数据自动刷新的时间间隔，设置为"禁用"将关闭自动刷新
+                            {t('refreshIntervalNote')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -77,10 +79,10 @@ export function AutoRefreshConfig({ currentInterval, onIntervalChange, trigger }
                             onValueChange={(value) => setSelectedInterval(parseInt(value))}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="选择刷新间隔" />
+                                <SelectValue placeholder={t('selectRefreshInterval')} />
                             </SelectTrigger>
                             <SelectContent>
-                                {REFRESH_OPTIONS.map((option) => (
+                                {getRefreshOptions().map((option) => (
                                     <SelectItem key={option.value} value={option.value.toString()}>
                                         {option.label}
                                     </SelectItem>
@@ -90,7 +92,7 @@ export function AutoRefreshConfig({ currentInterval, onIntervalChange, trigger }
 
                         <Button onClick={handleSave} className="w-full">
                             <Save className="h-4 w-4 mr-2" />
-                            保存设置
+                            {t('saveSettings')}
                         </Button>
                     </CardContent>
                 </Card>

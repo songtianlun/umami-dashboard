@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Settings, Save, TestTube, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useI18n } from "./i18n-provider"
 
 interface LoginConfig {
     serverUrl: string
@@ -64,6 +65,7 @@ const getFullConfig = async (): Promise<LoginConfig> => {
 }
 
 export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
+    const { t } = useI18n()
     const [config, setConfig] = useState<LoginConfig>({
         serverUrl: "",
         username: "",
@@ -90,8 +92,8 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
     const testConnection = async () => {
         if (!config.serverUrl || !config.username || !config.password) {
             toast({
-                title: "配置不完整",
-                description: "请填写所有必需的字段",
+                title: t('incompleteConfiguration'),
+                description: t('fillAllFields'),
                 variant: "destructive",
             })
             return
@@ -111,20 +113,20 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
 
             if (response.ok && result.success) {
                 toast({
-                    title: "连接成功",
-                    description: "Umami 服务器连接测试成功",
+                    title: t('connectionSuccessful'),
+                    description: t('connectionSuccessfulDescription'),
                 })
             } else {
                 toast({
-                    title: "连接失败",
-                    description: result.message || "无法连接到 Umami 服务器",
+                    title: t('connectionFailed'),
+                    description: result.message || t('connectionFailedDescription'),
                     variant: "destructive",
                 })
             }
         } catch (error) {
             toast({
-                title: "连接错误",
-                description: "网络错误或服务器无响应",
+                title: t('connectionError'),
+                description: t('connectionErrorDescription'),
                 variant: "destructive",
             })
         } finally {
@@ -135,8 +137,8 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
     const handleSave = async () => {
         if (!config.serverUrl || !config.username || !config.password) {
             toast({
-                title: "配置不完整",
-                description: "请填写所有必需的字段",
+                title: t('incompleteConfiguration'),
+                description: t('fillAllFields'),
                 variant: "destructive",
             })
             return
@@ -151,15 +153,15 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
             onConfigSave(config)
 
             toast({
-                title: "配置已保存",
-                description: "Umami 配置已成功保存并生效",
+                title: t('configurationSaved'),
+                description: t('configurationSavedDescription'),
             })
 
             setIsOpen(false)
         } catch (error) {
             toast({
-                title: "保存失败",
-                description: "无法保存配置，请重试",
+                title: t('saveFailed'),
+                description: t('saveFailedDescription'),
                 variant: "destructive",
             })
         } finally {
@@ -183,8 +185,8 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                     password: envConfig.password || "",
                 })
                 toast({
-                    title: "配置已重置",
-                    description: "已从环境变量读取原始配置信息",
+                    title: t('configurationReset'),
+                    description: t('configurationResetFromEnv'),
                 })
             } else {
                 setConfig({
@@ -193,14 +195,14 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                     password: "",
                 })
                 toast({
-                    title: "配置已重置",
-                    description: "环境变量未配置，已清空所有字段",
+                    title: t('configurationReset'),
+                    description: t('configurationResetEmpty'),
                 })
             }
         } catch (error) {
             toast({
-                title: "重置失败",
-                description: "无法重置配置，请重试",
+                title: t('resetFailed'),
+                description: t('resetFailedDescription'),
                 variant: "destructive",
             })
         } finally {
@@ -222,52 +224,52 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                     {trigger || (
                         <Button variant="outline" size="sm">
                             <Settings className="h-4 w-4 mr-2" />
-                            设置
+                            {t('settings')}
                         </Button>
                     )}
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>Umami 配置</DialogTitle>
+                        <DialogTitle>{t('umamiConfiguration')}</DialogTitle>
                         <DialogDescription>
-                            配置你的 Umami 服务器连接信息。配置将保存在本地浏览器中。
+                            {t('configurationDescription')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">连接设置</CardTitle>
+                            <CardTitle className="text-lg">{t('connectionSettings')}</CardTitle>
                             <CardDescription>
-                                请输入你的 Umami 服务器地址和登录凭据
+                                {t('connectionSettingsDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="serverUrl">服务器地址</Label>
+                                <Label htmlFor="serverUrl">{t('serverUrl')}</Label>
                                 <Input
                                     id="serverUrl"
-                                    placeholder="https://your-umami-server.com"
+                                    placeholder={t('serverUrlPlaceholder')}
                                     value={config.serverUrl}
                                     onChange={(e) => handleInputChange("serverUrl", e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="username">用户名</Label>
+                                <Label htmlFor="username">{t('username')}</Label>
                                 <Input
                                     id="username"
-                                    placeholder="admin"
+                                    placeholder={t('usernamePlaceholder')}
                                     value={config.username}
                                     onChange={(e) => handleInputChange("username", e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password">密码</Label>
+                                <Label htmlFor="password">{t('password')}</Label>
                                 <Input
                                     id="password"
                                     type="password"
-                                    placeholder="密码"
+                                    placeholder={t('passwordPlaceholder')}
                                     value={config.password}
                                     onChange={(e) => handleInputChange("password", e.target.value)}
                                 />
@@ -287,7 +289,7 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            <p>尝试从环境变量读取原始的配置信息，若不存在将置空所有字段</p>
+                                            <p>{t('resetTooltip')}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
@@ -299,7 +301,7 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                                     className="flex-1"
                                 >
                                     <TestTube className="h-4 w-4 mr-2" />
-                                    {testing ? "测试中..." : "测试连接"}
+                                    {testing ? t('testing') : t('testConnection')}
                                 </Button>
 
                                 <Button
@@ -308,7 +310,7 @@ export function LoginConfigDialog({ onConfigSave, trigger }: LoginConfigProps) {
                                     className="flex-1"
                                 >
                                     <Save className="h-4 w-4 mr-2" />
-                                    {saving ? "保存中..." : "保存配置"}
+                                    {saving ? t('saving') : t('saveConfiguration')}
                                 </Button>
                             </div>
                         </CardContent>

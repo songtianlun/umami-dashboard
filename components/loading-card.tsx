@@ -10,7 +10,7 @@ interface LoadingCardProps {
     className?: string
 }
 
-export function LoadingCard({ title, icon, description = "加载中...", className = "" }: LoadingCardProps) {
+export function LoadingCard({ title, icon, description, className = "" }: LoadingCardProps) {
     return (
         <Card className={`relative ${className}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -22,7 +22,7 @@ export function LoadingCard({ title, icon, description = "加载中...", classNa
                     <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
                     <div className="text-xl md:text-2xl font-bold text-muted-foreground">--</div>
                 </div>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                {description && <p className="text-xs text-muted-foreground">{description}</p>}
             </CardContent>
         </Card>
     )

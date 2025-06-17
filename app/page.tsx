@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,6 +16,9 @@ import { SessionHistory } from "@/lib/session-history"
 import { StatCardHistoryChart } from "@/components/history-chart"
 import { LoadingCard } from "@/components/loading-card"
 import { formatVersionInfo, getCopyrightYears } from "@/lib/version"
+import { useI18n } from "@/components/i18n-provider"
+import { LanguageConfig } from "@/components/language-config"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface WebsiteStats {
   id: string
@@ -48,14 +51,16 @@ type SortField = 'name' | 'domain' | 'currentOnline' | 'pageviews' | 'sessions' 
 type SortDirection = 'asc' | 'desc'
 
 export default function UmamiDashboard() {
+  const { t, locale } = useI18n()
+  
   const [websites, setWebsites] = useState<WebsiteStats[]>([])
   const [summary, setSummary] = useState<SummaryStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [initialLoad, setInitialLoad] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [config, setConfig] = useState<LoginConfig | null>(null)
   const [refreshInterval, setRefreshInterval] = useState(30000) // 30 seconds default
-  const [dataSource, setDataSource] = useState<"umami" | "error" | "loading">("loading")
+  const [dataSource, setDataSource] = useState<"umami" | "error" | "loading" | "not-configured">("not-configured")
   const [statusMessage, setStatusMessage] = useState<string>("")
   const [currentTime, setCurrentTime] = useState(new Date())
   const [sortField, setSortField] = useState<SortField>('currentOnline')
@@ -67,14 +72,39 @@ export default function UmamiDashboard() {
     avgSessionTime: [] as Array<{ x: number, y: number }>,
     totalCurrentOnline: [] as Array<{ x: number, y: number }>
   })
+  const [showConfigOnStart, setShowConfigOnStart] = useState(false)
+  const loginConfigRef = useRef<{ openDialog: () => void } | null>(null)
   const { toast } = useToast()
 
+  // 检查配置是否完整
+  const isConfigComplete = (config: LoginConfig | null): boolean => {
+    return !!(config?.serverUrl?.trim() && config?.username?.trim() && config?.password?.trim())
+  }
+
   const fetchData = async (showToast: boolean = true) => {
+    // 检查配置是否完整
+    if (!isConfigComplete(config)) {
+      console.log('Configuration incomplete, skipping data fetch')
+      setStatusMessage(t('pleaseCompleteConfiguration'))
+      setDataSource("not-configured")
+      setLoading(false)
+      setInitialLoad(false)
+      
+      if (showToast) {
+        toast({
+          title: t('configurationIncomplete'),
+          description: t('pleaseCompleteConfiguration'),
+          variant: "destructive",
+        })
+      }
+      return
+    }
+
     // Only show toast notification, don't set loading state immediately
     if (showToast) {
       toast({
-        title: "正在获取最新数据",
-        description: "正在从服务器获取最新统计数据...",
+        title: t('fetchingLatestData'),
+        description: t('fetchingFromServer'),
       })
     }
 
@@ -123,21 +153,21 @@ export default function UmamiDashboard() {
 
         if (showToast) {
           toast({
-            title: "数据更新成功",
-            description: `成功获取 ${data.websites.length} 个网站的实时数据`,
+            title: t('dataUpdatedSuccessfully'),
+            description: t('dataFetchSuccess', { count: data.websites.length }),
           })
         }
       } else {
         // Handle error response
-        setStatusMessage(data.message || data.error || "获取数据失败")
+        setStatusMessage(data.message || data.error || t('dataFetchFailed'))
         setDataSource("error")
         setLoading(false)
         setInitialLoad(false)
 
         if (showToast) {
           toast({
-            title: "数据获取失败",
-            description: data.message || data.error || "请检查配置信息",
+            title: t('dataUpdateFailed'),
+            description: data.message || data.error || t('checkConfiguration'),
             variant: "destructive",
           })
         }
@@ -147,13 +177,13 @@ export default function UmamiDashboard() {
       clearTimeout(loadingTimeout)
       setLoading(false)
       setInitialLoad(false)
-      setStatusMessage("网络连接失败，请检查网络连接")
+      setStatusMessage(t('networkConnectionFailed'))
       setDataSource("error")
 
       if (showToast) {
         toast({
-          title: "数据获取失败",
-          description: "无法获取统计数据，请检查网络连接",
+          title: t('dataUpdateFailed'),
+          description: t('unableToFetchStats'),
           variant: "destructive",
         })
       }
@@ -162,34 +192,65 @@ export default function UmamiDashboard() {
 
   useEffect(() => {
     // 使用新的配置获取方式（优先localStorage，后备环境变量）
-    getFullConfig().then(setConfig)
+    getFullConfig().then((loadedConfig) => {
+      setConfig(loadedConfig)
+      
+      // 检查是否需要显示配置对话框
+      if (!isConfigComplete(loadedConfig)) {
+        setShowConfigOnStart(true)
+        setDataSource("not-configured")
+        setStatusMessage(t('pleaseCompleteConfiguration'))
+        console.log(t('autoRefreshDisabled'))
+      }
+    })
 
     // Load refresh interval from localStorage
     const savedInterval = localStorage.getItem("umami-refresh-interval")
     if (savedInterval) {
       setRefreshInterval(parseInt(savedInterval))
     }
-  }, [])
+  }, [t])
 
+  // 首次加载时检查配置
   useEffect(() => {
-    fetchData(false) // Don't show toast on initial load
+    if (config && isConfigComplete(config)) {
+      fetchData(false) // Don't show toast on initial load
+      setDataSource("loading")
 
-    // 加载历史数据
-    setHistoryData({
-      totalPageviews: SessionHistory.getChartData('totalPageviews'),
-      totalSessions: SessionHistory.getChartData('totalSessions'),
-      totalVisitors: SessionHistory.getChartData('totalVisitors'),
-      avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
-      totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
-    })
+      // 加载历史数据
+      setHistoryData({
+        totalPageviews: SessionHistory.getChartData('totalPageviews'),
+        totalSessions: SessionHistory.getChartData('totalSessions'),
+        totalVisitors: SessionHistory.getChartData('totalVisitors'),
+        avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
+        totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
+      })
+    } else if (config) {
+      setInitialLoad(false)
+    }
   }, [config])
 
+  // 自动刷新逻辑 - 只有配置完整时才启用
   useEffect(() => {
-    if (refreshInterval > 0) {
+    if (refreshInterval > 0 && isConfigComplete(config)) {
       const interval = setInterval(() => fetchData(false), refreshInterval) // Don't show toast on auto-refresh
       return () => clearInterval(interval)
+    } else if (!isConfigComplete(config) && refreshInterval > 0) {
+      console.log(t('autoRefreshDisabled'))
     }
-  }, [refreshInterval, config])
+  }, [refreshInterval, config, t])
+
+  // 首次打开自动弹出设置窗口
+  useEffect(() => {
+    if (showConfigOnStart && !initialLoad) {
+      const timer = setTimeout(() => {
+        loginConfigRef.current?.openDialog?.()
+        setShowConfigOnStart(false)
+      }, 1000) // 延迟1秒弹出，确保界面已加载
+
+      return () => clearTimeout(timer)
+    }
+  }, [showConfigOnStart, initialLoad])
 
   // Update current time every second for relative time display
   useEffect(() => {
@@ -208,534 +269,592 @@ export default function UmamiDashboard() {
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + "M"
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K"
+      return (num / 1000000).toFixed(1) + 'M'
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K'
     }
     return num.toString()
   }
 
   const getRelativeTime = (timestamp: Date) => {
-    const diff = Math.floor((currentTime.getTime() - timestamp.getTime()) / 1000)
+    const now = currentTime.getTime()
+    const diff = now - timestamp.getTime()
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
 
-    if (diff < 60) return `${diff}秒前`
-    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
-    return `${Math.floor(diff / 86400)}天前`
+    if (seconds < 30) return t('justNow')
+    if (seconds < 60) return t('secondsAgo', { seconds })
+    if (minutes === 1) return t('minuteAgo')
+    if (minutes < 60) return t('minutesAgo', { minutes })
+    if (hours === 1) return t('hourAgo')
+    if (hours < 24) return t('hoursAgo', { hours })
+    if (days === 1) return t('dayAgo')
+    return t('daysAgo', { days })
+  }
+
+  const getSortFieldLabel = (field: SortField) => {
+    switch (field) {
+      case 'name': return t('websiteName')
+      case 'domain': return t('websiteAddress')
+      case 'currentOnline': return t('currentOnline')
+      case 'pageviews': return t('pageviews')
+      case 'sessions': return t('sessions')
+      case 'visitors': return t('visitors')
+      case 'avgSessionTime': return t('avgAccessTime')
+      case 'bounceRate': return t('bounceRate')
+      default: return field
+    }
   }
 
   const sortWebsites = (websites: WebsiteStats[], field: SortField, direction: SortDirection) => {
     return [...websites].sort((a, b) => {
-      let aValue: any = a[field]
-      let bValue: any = b[field]
+      let aValue = a[field]
+      let bValue = b[field]
 
-      // Handle special cases
-      if (field === 'name' || field === 'domain') {
+      // Handle string fields
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase()
         bValue = bValue.toLowerCase()
       }
 
-      // Compare values
-      if (aValue < bValue) {
-        return direction === 'asc' ? -1 : 1
+      if (direction === 'asc') {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
       }
-      if (aValue > bValue) {
-        return direction === 'asc' ? 1 : -1
-      }
-      return 0
     })
   }
 
   const handleSort = (field: SortField) => {
-    let newDirection: SortDirection = 'desc'
-
     if (sortField === field) {
-      // If clicking the same field, toggle direction
-      newDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
-      // If clicking a different field, use default direction
-      newDirection = field === 'name' || field === 'domain' ? 'asc' : 'desc'
+      setSortField(field)
+      setSortDirection('desc')
     }
-
-    setSortField(field)
-    setSortDirection(newDirection)
   }
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+      return <ChevronsUpDown className="h-4 w-4 opacity-50" />
     }
-
-    return sortDirection === 'asc'
-      ? <ChevronUp className="h-3 w-3 text-foreground" />
-      : <ChevronDown className="h-3 w-3 text-foreground" />
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="h-4 w-4" /> : 
+      <ChevronDown className="h-4 w-4" />
   }
 
   const handleConfigSave = (newConfig: LoginConfig) => {
     setConfig(newConfig)
+    // 配置保存后自动刷新数据
+    if (isConfigComplete(newConfig)) {
+      setDataSource("loading")
+      fetchData(true)
+    }
+    
     toast({
-      title: "配置已保存",
-      description: "正在获取最新数据...",
+      title: t('configurationSaved'),
+      description: t('configurationSavedDescription'),
     })
   }
 
   const handleRefreshIntervalChange = (interval: number) => {
     setRefreshInterval(interval)
-    const intervalLabel = interval === 0 ? "禁用" : `${interval / 1000}秒`
+    const intervalLabel = interval === 0 ? t('disable') : `${interval / 1000}${t('seconds')}`
     toast({
-      title: "刷新间隔已更新",
-      description: `自动刷新已设置为: ${intervalLabel}`,
+      title: t('refreshIntervalUpdated'),
+      description: t('autoRefreshSetTo', { interval: intervalLabel }),
     })
   }
 
+  const getServerHostname = (serverUrl: string) => {
+    try {
+      if (!serverUrl || !serverUrl.trim()) {
+        return null
+      }
+      return new URL(serverUrl).hostname
+    } catch (error) {
+      return null
+    }
+  }
+
+  const getDataSourceBadge = () => {
+    switch (dataSource) {
+      case "umami":
+        return { variant: "default" as const, text: t('realtimeData') }
+      case "error":
+        return { variant: "destructive" as const, text: t('connectionFailed') }
+      case "not-configured":
+        return { variant: "secondary" as const, text: t('notConfigured') }
+      default:
+        return { variant: "secondary" as const, text: t('notConnected') }
+    }
+  }
+
+  const configComplete = isConfigComplete(config)
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div className="space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Umami 统计面板</h1>
-              <div className="flex items-center gap-2">
-                <Badge variant={dataSource === "umami" ? "default" : dataSource === "error" ? "destructive" : "secondary"}>
-                  {dataSource === "umami" ? "实时数据" : dataSource === "error" ? "连接失败" : "未连接"}
-                </Badge>
-                {loading && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    更新中
-                  </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+          {/* Header */}
+          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getDataSourceBadge().variant}>
+                    {getDataSourceBadge().text}
+                  </Badge>
+                  {loading && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      {t('updating')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                <span>{t('timeDataSummary')}</span>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span className="text-xs">
+                    {t('lastUpdated')}: {getRelativeTime(lastUpdated)}
+                    <span className="text-muted-foreground/70 ml-1 hidden sm:inline">
+                      ({lastUpdated.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })})
+                    </span>
+                  </span>
+                </div>
+                {config && getServerHostname(config.serverUrl) && (
+                  <span className="text-xs hidden md:inline">• {t('server')}: {getServerHostname(config.serverUrl)}</span>
                 )}
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-              <span>过去 24 小时数据汇总</span>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span className="text-xs">
-                  最后更新: {getRelativeTime(lastUpdated)}
-                  <span className="text-muted-foreground/70 ml-1 hidden sm:inline">
-                    ({lastUpdated.toLocaleString('zh-CN', {
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })})
-                  </span>
-                </span>
-              </div>
-              {config && (
-                <span className="text-xs hidden md:inline">• 服务器: {new URL(config.serverUrl).hostname}</span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <AutoRefreshConfig
-              currentInterval={refreshInterval}
-              onIntervalChange={handleRefreshIntervalChange}
-            />
-            <LoginConfigDialog onConfigSave={handleConfigSave} />
-            <Button onClick={() => fetchData(true)} disabled={loading} variant="outline" size="sm" className="w-full sm:w-auto">
-              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-              {loading ? "刷新中..." : "刷新数据"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Status Message */}
-        {statusMessage && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{statusMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Summary Cards */}
-        <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-          {summary ? (
-            <>
-              <Card className="col-span-2 sm:col-span-1 relative">
-                <StatCardHistoryChart data={historyData.totalCurrentOnline} />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">当前在线</CardTitle>
-                  <div className="flex items-center">
-                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
-                  <p className="text-xs text-muted-foreground">实时访客</p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <StatCardHistoryChart data={historyData.totalPageviews} />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">总浏览量</CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
-                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <StatCardHistoryChart data={historyData.totalSessions} />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">访问次数</CardTitle>
-                  <MousePointer className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
-                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <StatCardHistoryChart data={historyData.totalVisitors} />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">访客数</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
-                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <StatCardHistoryChart data={historyData.avgSessionTime} />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">平均访问时间</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
-                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <>
-              <LoadingCard
-                title="当前在线"
-                icon={
-                  <div className="flex items-center">
-                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                }
-                description="实时访客"
-                className="col-span-2 sm:col-span-1"
+            <div className="flex flex-col sm:flex-row gap-2">
+              <LanguageConfig />
+              <AutoRefreshConfig
+                currentInterval={refreshInterval}
+                onIntervalChange={handleRefreshIntervalChange}
               />
-
-              <LoadingCard
-                title="总浏览量"
-                icon={<Eye className="h-4 w-4 text-muted-foreground" />}
-                description="过去 24 小时"
-              />
-
-              <LoadingCard
-                title="访问次数"
-                icon={<MousePointer className="h-4 w-4 text-muted-foreground" />}
-                description="过去 24 小时"
-              />
-
-              <LoadingCard
-                title="访客数"
-                icon={<Users className="h-4 w-4 text-muted-foreground" />}
-                description="过去 24 小时"
-              />
-
-              <LoadingCard
-                title="平均访问时间"
-                icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-                description="过去 24 小时"
-              />
-            </>
-          )}
-        </div>
-
-        {/* Debug/Test Section - only show if config exists but no data */}
-        {dataSource === "error" && config && (
-          <RealtimeTest config={config} />
-        )}
-
-        {/* Websites Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              网站详细统计
-            </CardTitle>
-            <CardDescription className="text-sm">
-              按{
-                sortField === 'name' ? '网站名称' :
-                  sortField === 'domain' ? '网站地址' :
-                    sortField === 'currentOnline' ? '当前在线' :
-                      sortField === 'pageviews' ? '浏览量' :
-                        sortField === 'sessions' ? '访问次数' :
-                          sortField === 'visitors' ? '访客数' :
-                            sortField === 'avgSessionTime' ? '访问时间' :
-                              '跳出率'
-              }{sortDirection === 'asc' ? '升序' : '降序'}排列 • 共 {websites.length} 个网站
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className={`transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-              {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
-                {/* Mobile Sort Controls */}
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <span className="text-sm font-medium">排序方式:</span>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={sortField}
-                      onChange={(e) => handleSort(e.target.value as SortField)}
-                      className="text-sm border rounded px-2 py-1 bg-background"
+              <LoginConfigDialog ref={loginConfigRef} onConfigSave={handleConfigSave} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button 
+                      onClick={() => fetchData(true)} 
+                      disabled={loading || !configComplete} 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full sm:w-auto"
                     >
-                      <option value="currentOnline">当前在线</option>
-                      <option value="name">网站名称</option>
-                      <option value="domain">网站地址</option>
-                      <option value="pageviews">浏览量</option>
-                      <option value="sessions">访问次数</option>
-                      <option value="visitors">访客数</option>
-                      <option value="avgSessionTime">访问时间</option>
-                      <option value="bounceRate">跳出率</option>
-                    </select>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                      className="p-2"
-                    >
-                      {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                      {loading ? t('refreshing') : t('refreshData')}
                     </Button>
                   </div>
-                </div>
+                </TooltipTrigger>
+                {!configComplete && (
+                  <TooltipContent>
+                    <p>{t('refreshDisabledTooltip')}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          </div>
 
-                {websites.length === 0 && !loading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    暂无网站数据
-                  </div>
-                ) : websites.length === 0 && loading ? (
-                  <div className="text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      加载中...
+          {/* Status Message */}
+          {statusMessage && (
+            <Alert variant={dataSource === "not-configured" ? "default" : "destructive"}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{statusMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Summary Cards */}
+          <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+            {summary ? (
+              <>
+                <Card className="col-span-2 sm:col-span-1 relative">
+                  <StatCardHistoryChart data={historyData.totalCurrentOnline} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('currentOnline')}</CardTitle>
+                    <div className="flex items-center">
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
+                    <p className="text-xs text-muted-foreground">{t('realtimeVisitors')}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="relative">
+                  <StatCardHistoryChart data={historyData.totalPageviews} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('totalPageviews')}</CardTitle>
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
+                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="relative">
+                  <StatCardHistoryChart data={historyData.totalSessions} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('totalSessions')}</CardTitle>
+                    <MousePointer className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
+                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="relative">
+                  <StatCardHistoryChart data={historyData.totalVisitors} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('totalVisitors')}</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
+                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="relative">
+                  <StatCardHistoryChart data={historyData.avgSessionTime} />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('averageSessionTime')}</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
+                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <>
+                <LoadingCard
+                  title={t('currentOnline')}
+                  icon={
+                    <div className="flex items-center">
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  }
+                  description={t('realtimeVisitors')}
+                  className="col-span-2 sm:col-span-1"
+                />
+
+                <LoadingCard
+                  title={t('totalPageviews')}
+                  icon={<Eye className="h-4 w-4 text-muted-foreground" />}
+                  description={t('past24Hours')}
+                />
+
+                <LoadingCard
+                  title={t('totalSessions')}
+                  icon={<MousePointer className="h-4 w-4 text-muted-foreground" />}
+                  description={t('past24Hours')}
+                />
+
+                <LoadingCard
+                  title={t('totalVisitors')}
+                  icon={<Users className="h-4 w-4 text-muted-foreground" />}
+                  description={t('past24Hours')}
+                />
+
+                <LoadingCard
+                  title={t('averageSessionTime')}
+                  icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+                  description={t('past24Hours')}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Debug/Test Section - only show if config exists but no data */}
+          {dataSource === "error" && config && (
+            <RealtimeTest config={config} />
+          )}
+
+          {/* Websites Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                {t('detailedWebsiteStats')}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                {t('sortedBy', { 
+                  field: getSortFieldLabel(sortField), 
+                  direction: t(sortDirection === 'asc' ? 'ascending' : 'descending')
+                })} • {t('totalWebsites', { count: websites.length })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className={`transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {/* Mobile Sort Controls */}
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm font-medium">{t('sortBy')}:</span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={sortField}
+                        onChange={(e) => handleSort(e.target.value as SortField)}
+                        className="text-sm border rounded px-2 py-1 bg-background"
+                      >
+                        <option value="currentOnline">{t('currentOnline')}</option>
+                        <option value="name">{t('websiteName')}</option>
+                        <option value="domain">{t('websiteAddress')}</option>
+                        <option value="pageviews">{t('pageviews')}</option>
+                        <option value="sessions">{t('sessions')}</option>
+                        <option value="visitors">{t('visitors')}</option>
+                        <option value="avgSessionTime">{t('avgAccessTime')}</option>
+                        <option value="bounceRate">{t('bounceRate')}</option>
+                      </select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                        className="p-2"
+                      >
+                        {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
                     </div>
                   </div>
-                ) : (
-                  websites.map((website) => (
-                    <Card key={website.id} className="p-4 mobile-card">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                            <span className="font-medium truncate">{website.name}</span>
-                          </div>
-                          <Badge
-                            variant={website.currentOnline > 0 ? "default" : "secondary"}
-                            className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
-                          >
-                            {website.currentOnline} 在线
-                          </Badge>
-                        </div>
-                        <div>
-                          <a
-                            href={website.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm break-all"
-                          >
-                            {website.domain}
-                          </a>
-                        </div>
-                        <div className="mobile-stats-grid">
-                          <div>
-                            <span className="text-muted-foreground">浏览量:</span>
-                            <span className="ml-1 font-mono">{formatNumber(website.pageviews)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">访问次数:</span>
-                            <span className="ml-1 font-mono">{formatNumber(website.sessions)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">访客数:</span>
-                            <span className="ml-1 font-mono">{formatNumber(website.visitors)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">跳出率:</span>
-                            <span className="ml-1 font-mono">{website.bounceRate.toFixed(1)}%</span>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">平均访问时间:</span>
-                            <span className="ml-1 font-mono">{formatTime(website.avgSessionTime)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </div>
 
-              {/* Desktop Table View */}
-              <div className="hidden md:block rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors"
-                          onClick={() => handleSort('name')}
-                        >
-                          网站名称
-                          {getSortIcon('name')}
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors"
-                          onClick={() => handleSort('domain')}
-                        >
-                          网站地址
-                          {getSortIcon('domain')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
-                          onClick={() => handleSort('currentOnline')}
-                        >
-                          当前在线
-                          {getSortIcon('currentOnline')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                          onClick={() => handleSort('pageviews')}
-                        >
-                          浏览量
-                          {getSortIcon('pageviews')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                          onClick={() => handleSort('sessions')}
-                        >
-                          访问次数
-                          {getSortIcon('sessions')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                          onClick={() => handleSort('visitors')}
-                        >
-                          访客数
-                          {getSortIcon('visitors')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                          onClick={() => handleSort('avgSessionTime')}
-                        >
-                          平均访问时间
-                          {getSortIcon('avgSessionTime')}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right">
-                        <button
-                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                          onClick={() => handleSort('bounceRate')}
-                        >
-                          跳出率
-                          {getSortIcon('bounceRate')}
-                        </button>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {websites.length === 0 && !loading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          暂无网站数据
-                        </TableCell>
-                      </TableRow>
-                    ) : websites.length === 0 && loading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <div className="flex items-center justify-center">
-                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                            加载中...
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      websites.map((website) => (
-                        <TableRow key={website.id}>
-                          <TableCell className="font-medium">
+                  {websites.length === 0 && !loading ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {t('noWebsiteData')}
+                    </div>
+                  ) : websites.length === 0 && loading ? (
+                    <div className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        {t('loading')}
+                      </div>
+                    </div>
+                  ) : (
+                    websites.map((website) => (
+                      <Card key={website.id} className="p-4 mobile-card">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                              {website.name}
+                              <span className="font-medium truncate">{website.name}</span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <a
-                              href={website.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              {website.domain}
-                            </a>
-                          </TableCell>
-                          <TableCell className="text-center">
                             <Badge
                               variant={website.currentOnline > 0 ? "default" : "secondary"}
                               className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
                             >
-                              {website.currentOnline}
+                              {website.currentOnline} {t('online')}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(website.pageviews)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(website.sessions)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(website.visitors)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatTime(website.avgSessionTime)}</TableCell>
-                          <TableCell className="text-right font-mono">{website.bounceRate.toFixed(1)}%</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                          </div>
+                          <div>
+                            <a
+                              href={website.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline text-sm break-all"
+                            >
+                              {website.domain}
+                            </a>
+                          </div>
+                          <div className="mobile-stats-grid">
+                            <div>
+                              <span className="text-muted-foreground">{t('pageviews')}:</span>
+                              <span className="ml-1 font-mono">{formatNumber(website.pageviews)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t('sessions')}:</span>
+                              <span className="ml-1 font-mono">{formatNumber(website.sessions)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t('visitors')}:</span>
+                              <span className="ml-1 font-mono">{formatNumber(website.visitors)}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t('bounceRate')}:</span>
+                              <span className="ml-1 font-mono">{website.bounceRate.toFixed(1)}%</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">{t('averageSessionTime')}:</span>
+                              <span className="ml-1 font-mono">{formatTime(website.avgSessionTime)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  )}
+                </div>
 
-      {/* Version Info Footer */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="text-center space-y-1">
-          <p className="text-xs text-muted-foreground">
-            {formatVersionInfo()}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {getCopyrightYears()} Umami-Dashboard
-          </p>
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => handleSort('name')}
+                          >
+                            {t('websiteName')}
+                            {getSortIcon('name')}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => handleSort('domain')}
+                          >
+                            {t('websiteAddress')}
+                            {getSortIcon('domain')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-center">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
+                            onClick={() => handleSort('currentOnline')}
+                          >
+                            {t('currentOnline')}
+                            {getSortIcon('currentOnline')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                            onClick={() => handleSort('pageviews')}
+                          >
+                            {t('pageviews')}
+                            {getSortIcon('pageviews')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                            onClick={() => handleSort('sessions')}
+                          >
+                            {t('sessions')}
+                            {getSortIcon('sessions')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                            onClick={() => handleSort('visitors')}
+                          >
+                            {t('visitors')}
+                            {getSortIcon('visitors')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                            onClick={() => handleSort('avgSessionTime')}
+                          >
+                            {t('averageSessionTime')}
+                            {getSortIcon('avgSessionTime')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                            onClick={() => handleSort('bounceRate')}
+                          >
+                            {t('bounceRate')}
+                            {getSortIcon('bounceRate')}
+                          </button>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {websites.length === 0 && !loading ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            {t('noWebsiteData')}
+                          </TableCell>
+                        </TableRow>
+                      ) : websites.length === 0 && loading ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <div className="flex items-center justify-center">
+                              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                              {t('loading')}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        websites.map((website) => (
+                          <TableRow key={website.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                                {website.name}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <a
+                                href={website.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {website.domain}
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                variant={website.currentOnline > 0 ? "default" : "secondary"}
+                                className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
+                              >
+                                {website.currentOnline}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">{formatNumber(website.pageviews)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatNumber(website.sessions)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatNumber(website.visitors)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatTime(website.avgSessionTime)}</TableCell>
+                            <TableCell className="text-right font-mono">{website.bounceRate.toFixed(1)}%</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Version Info Footer */}
+        <div className="container mx-auto px-4 py-4">
+          <div className="text-center space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {formatVersionInfo()}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {getCopyrightYears()} Umami-Dashboard
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
