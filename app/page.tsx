@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { LoginConfigDialog } from "@/components/login-config"
+import { LoginConfigDialog, getFullConfig } from "@/components/login-config"
 import { AutoRefreshConfig } from "@/components/auto-refresh-config"
 import { RealtimeTest } from "@/components/realtime-test"
 import { useToast } from "@/hooks/use-toast"
@@ -160,15 +160,8 @@ export default function UmamiDashboard() {
   }
 
   useEffect(() => {
-    // Load config from localStorage
-    const savedConfig = localStorage.getItem("umami-config")
-    if (savedConfig) {
-      try {
-        setConfig(JSON.parse(savedConfig))
-      } catch (error) {
-        console.error("Failed to parse saved config:", error)
-      }
-    }
+    // 使用新的配置获取方式（优先localStorage，后备环境变量）
+    getFullConfig().then(setConfig)
 
     // Load refresh interval from localStorage
     const savedInterval = localStorage.getItem("umami-refresh-interval")
