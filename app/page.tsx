@@ -12,6 +12,8 @@ import { AutoRefreshConfig } from "@/components/auto-refresh-config"
 import { RealtimeTest } from "@/components/realtime-test"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { SessionHistory } from "@/lib/session-history"
+import { StatCardHistoryChart } from "@/components/history-chart"
 
 interface WebsiteStats {
   id: string
@@ -61,6 +63,13 @@ export default function UmamiDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [sortField, setSortField] = useState<SortField>('currentOnline')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [historyData, setHistoryData] = useState({
+    totalPageviews: [] as Array<{ x: number, y: number }>,
+    totalSessions: [] as Array<{ x: number, y: number }>,
+    totalVisitors: [] as Array<{ x: number, y: number }>,
+    avgSessionTime: [] as Array<{ x: number, y: number }>,
+    totalCurrentOnline: [] as Array<{ x: number, y: number }>
+  })
   const { toast } = useToast()
 
   const fetchData = async (showToast: boolean = true) => {
@@ -100,6 +109,18 @@ export default function UmamiDashboard() {
       setStatusMessage(data.message || data.error || "")
       setLastUpdated(new Date())
       setLoading(false)
+
+      // 保存数据到历史记录
+      SessionHistory.addDataPoint(data.summary)
+
+      // 更新历史图表数据
+      setHistoryData({
+        totalPageviews: SessionHistory.getChartData('totalPageviews'),
+        totalSessions: SessionHistory.getChartData('totalSessions'),
+        totalVisitors: SessionHistory.getChartData('totalVisitors'),
+        avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
+        totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
+      })
 
       if (showToast) {
         if (data.source === "umami") {
@@ -150,6 +171,15 @@ export default function UmamiDashboard() {
 
   useEffect(() => {
     fetchData(false) // Don't show toast on initial load
+
+    // 加载历史数据
+    setHistoryData({
+      totalPageviews: SessionHistory.getChartData('totalPageviews'),
+      totalSessions: SessionHistory.getChartData('totalSessions'),
+      totalVisitors: SessionHistory.getChartData('totalVisitors'),
+      avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
+      totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
+    })
   }, [config])
 
   useEffect(() => {
@@ -326,7 +356,8 @@ export default function UmamiDashboard() {
 
         {/* Summary Cards */}
         <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-          <Card className="col-span-2 sm:col-span-1">
+          <Card className="col-span-2 sm:col-span-1 relative">
+            <StatCardHistoryChart data={historyData.totalCurrentOnline} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">当前在线</CardTitle>
               <div className="flex items-center">
@@ -340,7 +371,8 @@ export default function UmamiDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative">
+            <StatCardHistoryChart data={historyData.totalPageviews} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">总浏览量</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
@@ -351,7 +383,8 @@ export default function UmamiDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative">
+            <StatCardHistoryChart data={historyData.totalSessions} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">访问次数</CardTitle>
               <MousePointer className="h-4 w-4 text-muted-foreground" />
@@ -362,7 +395,8 @@ export default function UmamiDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative">
+            <StatCardHistoryChart data={historyData.totalVisitors} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">访客数</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -373,7 +407,8 @@ export default function UmamiDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative">
+            <StatCardHistoryChart data={historyData.avgSessionTime} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">平均访问时间</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
