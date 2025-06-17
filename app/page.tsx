@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { SessionHistory } from "@/lib/session-history"
 import { StatCardHistoryChart } from "@/components/history-chart"
+import { LoadingCard } from "@/components/loading-card"
 
 interface WebsiteStats {
   id: string
@@ -47,18 +48,13 @@ type SortDirection = 'asc' | 'desc'
 
 export default function UmamiDashboard() {
   const [websites, setWebsites] = useState<WebsiteStats[]>([])
-  const [summary, setSummary] = useState<SummaryStats>({
-    totalPageviews: 0,
-    totalSessions: 0,
-    totalVisitors: 0,
-    avgSessionTime: 0,
-    totalCurrentOnline: 0,
-  })
+  const [summary, setSummary] = useState<SummaryStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [config, setConfig] = useState<LoginConfig | null>(null)
   const [refreshInterval, setRefreshInterval] = useState(30000) // 30 seconds default
-  const [dataSource, setDataSource] = useState<"mock" | "umami">("mock")
+  const [dataSource, setDataSource] = useState<"umami" | "error" | "loading">("loading")
   const [statusMessage, setStatusMessage] = useState<string>("")
   const [currentTime, setCurrentTime] = useState(new Date())
   const [sortField, setSortField] = useState<SortField>('currentOnline')
@@ -100,39 +96,48 @@ export default function UmamiDashboard() {
       // Clear the loading timeout since we got a response
       clearTimeout(loadingTimeout)
 
-      // Apply current sorting
-      const sortedWebsites = sortWebsites(data.websites, sortField, sortDirection)
+      if (response.ok && data.websites && data.summary) {
+        // Apply current sorting
+        const sortedWebsites = sortWebsites(data.websites, sortField, sortDirection)
 
-      setWebsites(sortedWebsites)
-      setSummary(data.summary)
-      setDataSource(data.source)
-      setStatusMessage(data.message || data.error || "")
-      setLastUpdated(new Date())
-      setLoading(false)
+        setWebsites(sortedWebsites)
+        setSummary(data.summary)
+        setDataSource(data.source)
+        setStatusMessage("")
+        setLastUpdated(new Date())
+        setLoading(false)
+        setInitialLoad(false)
 
-      // 保存数据到历史记录
-      SessionHistory.addDataPoint(data.summary)
+        // 保存数据到历史记录
+        SessionHistory.addDataPoint(data.summary)
 
-      // 更新历史图表数据
-      setHistoryData({
-        totalPageviews: SessionHistory.getChartData('totalPageviews'),
-        totalSessions: SessionHistory.getChartData('totalSessions'),
-        totalVisitors: SessionHistory.getChartData('totalVisitors'),
-        avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
-        totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
-      })
+        // 更新历史图表数据
+        setHistoryData({
+          totalPageviews: SessionHistory.getChartData('totalPageviews'),
+          totalSessions: SessionHistory.getChartData('totalSessions'),
+          totalVisitors: SessionHistory.getChartData('totalVisitors'),
+          avgSessionTime: SessionHistory.getChartData('avgSessionTime'),
+          totalCurrentOnline: SessionHistory.getChartData('totalCurrentOnline')
+        })
 
-      if (showToast) {
-        if (data.source === "umami") {
+        if (showToast) {
           toast({
             title: "数据更新成功",
             description: `成功获取 ${data.websites.length} 个网站的实时数据`,
           })
-        } else {
+        }
+      } else {
+        // Handle error response
+        setStatusMessage(data.message || data.error || "获取数据失败")
+        setDataSource("error")
+        setLoading(false)
+        setInitialLoad(false)
+
+        if (showToast) {
           toast({
-            title: "使用演示数据",
-            description: data.message || "请配置 Umami 连接以获取真实数据",
-            variant: "secondary",
+            title: "数据获取失败",
+            description: data.message || data.error || "请检查配置信息",
+            variant: "destructive",
           })
         }
       }
@@ -140,6 +145,9 @@ export default function UmamiDashboard() {
       console.error("Failed to fetch data:", error)
       clearTimeout(loadingTimeout)
       setLoading(false)
+      setInitialLoad(false)
+      setStatusMessage("网络连接失败，请检查网络连接")
+      setDataSource("error")
 
       if (showToast) {
         toast({
@@ -301,8 +309,8 @@ export default function UmamiDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Umami 统计面板</h1>
               <div className="flex items-center gap-2">
-                <Badge variant={dataSource === "umami" ? "default" : "secondary"}>
-                  {dataSource === "umami" ? "实时数据" : "演示数据"}
+                <Badge variant={dataSource === "umami" ? "default" : dataSource === "error" ? "destructive" : "secondary"}>
+                  {dataSource === "umami" ? "实时数据" : dataSource === "error" ? "连接失败" : "未连接"}
                 </Badge>
                 {loading && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -356,72 +364,114 @@ export default function UmamiDashboard() {
 
         {/* Summary Cards */}
         <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-          <Card className="col-span-2 sm:col-span-1 relative">
-            <StatCardHistoryChart data={historyData.totalCurrentOnline} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">当前在线</CardTitle>
-              <div className="flex items-center">
-                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
-              <p className="text-xs text-muted-foreground">实时访客</p>
-            </CardContent>
-          </Card>
+          {summary ? (
+            <>
+              <Card className="col-span-2 sm:col-span-1 relative">
+                <StatCardHistoryChart data={historyData.totalCurrentOnline} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">当前在线</CardTitle>
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
+                  <p className="text-xs text-muted-foreground">实时访客</p>
+                </CardContent>
+              </Card>
 
-          <Card className="relative">
-            <StatCardHistoryChart data={historyData.totalPageviews} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">总浏览量</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
-              <p className="text-xs text-muted-foreground">过去 24 小时</p>
-            </CardContent>
-          </Card>
+              <Card className="relative">
+                <StatCardHistoryChart data={historyData.totalPageviews} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">总浏览量</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
+                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
+                </CardContent>
+              </Card>
 
-          <Card className="relative">
-            <StatCardHistoryChart data={historyData.totalSessions} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">访问次数</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
-              <p className="text-xs text-muted-foreground">过去 24 小时</p>
-            </CardContent>
-          </Card>
+              <Card className="relative">
+                <StatCardHistoryChart data={historyData.totalSessions} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">访问次数</CardTitle>
+                  <MousePointer className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
+                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
+                </CardContent>
+              </Card>
 
-          <Card className="relative">
-            <StatCardHistoryChart data={historyData.totalVisitors} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">访客数</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
-              <p className="text-xs text-muted-foreground">过去 24 小时</p>
-            </CardContent>
-          </Card>
+              <Card className="relative">
+                <StatCardHistoryChart data={historyData.totalVisitors} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">访客数</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
+                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
+                </CardContent>
+              </Card>
 
-          <Card className="relative">
-            <StatCardHistoryChart data={historyData.avgSessionTime} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">平均访问时间</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
-              <p className="text-xs text-muted-foreground">过去 24 小时</p>
-            </CardContent>
-          </Card>
+              <Card className="relative">
+                <StatCardHistoryChart data={historyData.avgSessionTime} />
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">平均访问时间</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
+                  <p className="text-xs text-muted-foreground">过去 24 小时</p>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              <LoadingCard
+                title="当前在线"
+                icon={
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                }
+                description="实时访客"
+                className="col-span-2 sm:col-span-1"
+              />
+
+              <LoadingCard
+                title="总浏览量"
+                icon={<Eye className="h-4 w-4 text-muted-foreground" />}
+                description="过去 24 小时"
+              />
+
+              <LoadingCard
+                title="访问次数"
+                icon={<MousePointer className="h-4 w-4 text-muted-foreground" />}
+                description="过去 24 小时"
+              />
+
+              <LoadingCard
+                title="访客数"
+                icon={<Users className="h-4 w-4 text-muted-foreground" />}
+                description="过去 24 小时"
+              />
+
+              <LoadingCard
+                title="平均访问时间"
+                icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+                description="过去 24 小时"
+              />
+            </>
+          )}
         </div>
 
-        {/* Debug/Test Section - only show if using demo data */}
-        {dataSource === "mock" && config && (
+        {/* Debug/Test Section - only show if config exists but no data */}
+        {dataSource === "error" && config && (
           <RealtimeTest config={config} />
         )}
 
