@@ -1,4 +1,4 @@
-name: Build Main Docker to Aliyun ACR
+name: Build Release TAG Docker to Docker Hub
 on:
   push:
     tags:
