@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle } from "lucide-react"
+import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LoginConfigDialog } from "@/components/login-config"
 import { AutoRefreshConfig } from "@/components/auto-refresh-config"
@@ -40,6 +40,9 @@ interface LoginConfig {
   password: string
 }
 
+type SortField = 'name' | 'domain' | 'currentOnline' | 'pageviews' | 'sessions' | 'visitors' | 'avgSessionTime' | 'bounceRate'
+type SortDirection = 'asc' | 'desc'
+
 export default function UmamiDashboard() {
   const [websites, setWebsites] = useState<WebsiteStats[]>([])
   const [summary, setSummary] = useState<SummaryStats>({
@@ -56,6 +59,8 @@ export default function UmamiDashboard() {
   const [dataSource, setDataSource] = useState<"mock" | "umami">("mock")
   const [statusMessage, setStatusMessage] = useState<string>("")
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [sortField, setSortField] = useState<SortField>('currentOnline')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const { toast } = useToast()
 
   const fetchData = async (showToast: boolean = true) => {
@@ -86,8 +91,8 @@ export default function UmamiDashboard() {
       // Clear the loading timeout since we got a response
       clearTimeout(loadingTimeout)
 
-      // Sort by current online visitors (descending)
-      const sortedWebsites = data.websites.sort((a: WebsiteStats, b: WebsiteStats) => b.currentOnline - a.currentOnline)
+      // Apply current sorting
+      const sortedWebsites = sortWebsites(data.websites, sortField, sortDirection)
 
       setWebsites(sortedWebsites)
       setSummary(data.summary)
@@ -160,6 +165,14 @@ export default function UmamiDashboard() {
     return () => clearInterval(timer)
   }, [])
 
+  // Re-sort websites when sort criteria changes
+  useEffect(() => {
+    if (websites.length > 0) {
+      const sortedWebsites = sortWebsites(websites, sortField, sortDirection)
+      setWebsites(sortedWebsites)
+    }
+  }, [sortField, sortDirection])
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
@@ -183,6 +196,53 @@ export default function UmamiDashboard() {
     if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
     if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
     return `${Math.floor(diff / 86400)}天前`
+  }
+
+  const sortWebsites = (websites: WebsiteStats[], field: SortField, direction: SortDirection) => {
+    return [...websites].sort((a, b) => {
+      let aValue: any = a[field]
+      let bValue: any = b[field]
+
+      // Handle special cases
+      if (field === 'name' || field === 'domain') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      // Compare values
+      if (aValue < bValue) {
+        return direction === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return direction === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+  }
+
+  const handleSort = (field: SortField) => {
+    let newDirection: SortDirection = 'desc'
+
+    if (sortField === field) {
+      // If clicking the same field, toggle direction
+      newDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+    } else {
+      // If clicking a different field, use default direction
+      newDirection = field === 'name' || field === 'domain' ? 'asc' : 'desc'
+    }
+
+    setSortField(field)
+    setSortDirection(newDirection)
+  }
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+    }
+
+    return sortDirection === 'asc'
+      ? <ChevronUp className="h-3 w-3 text-foreground" />
+      : <ChevronDown className="h-3 w-3 text-foreground" />
   }
 
   const handleConfigSave = (newConfig: LoginConfig) => {
@@ -335,21 +395,96 @@ export default function UmamiDashboard() {
               <Globe className="h-5 w-5" />
               网站详细统计
             </CardTitle>
-            <CardDescription>按当前在线访客数降序排列 • 共 {websites.length} 个网站</CardDescription>
+            <CardDescription>
+              按{
+                sortField === 'name' ? '网站名称' :
+                  sortField === 'domain' ? '网站地址' :
+                    sortField === 'currentOnline' ? '当前在线' :
+                      sortField === 'pageviews' ? '浏览量' :
+                        sortField === 'sessions' ? '访问次数' :
+                          sortField === 'visitors' ? '访客数' :
+                            sortField === 'avgSessionTime' ? '访问时间' :
+                              '跳出率'
+              }{sortDirection === 'asc' ? '升序' : '降序'}排列 • 共 {websites.length} 个网站
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className={`rounded-md border transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>网站名称</TableHead>
-                    <TableHead>网站地址</TableHead>
-                    <TableHead className="text-center">当前在线</TableHead>
-                    <TableHead className="text-right">浏览量</TableHead>
-                    <TableHead className="text-right">访问次数</TableHead>
-                    <TableHead className="text-right">访客数</TableHead>
-                    <TableHead className="text-right">平均访问时间</TableHead>
-                    <TableHead className="text-right">跳出率</TableHead>
+                    <TableHead>
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors"
+                        onClick={() => handleSort('name')}
+                      >
+                        网站名称
+                        {getSortIcon('name')}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors"
+                        onClick={() => handleSort('domain')}
+                      >
+                        网站地址
+                        {getSortIcon('domain')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
+                        onClick={() => handleSort('currentOnline')}
+                      >
+                        当前在线
+                        {getSortIcon('currentOnline')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                        onClick={() => handleSort('pageviews')}
+                      >
+                        浏览量
+                        {getSortIcon('pageviews')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                        onClick={() => handleSort('sessions')}
+                      >
+                        访问次数
+                        {getSortIcon('sessions')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                        onClick={() => handleSort('visitors')}
+                      >
+                        访客数
+                        {getSortIcon('visitors')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                        onClick={() => handleSort('avgSessionTime')}
+                      >
+                        平均访问时间
+                        {getSortIcon('avgSessionTime')}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                        onClick={() => handleSort('bounceRate')}
+                      >
+                        跳出率
+                        {getSortIcon('bounceRate')}
+                      </button>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
