@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (configHeader) {
       try {
         const config = JSON.parse(decodeURIComponent(configHeader))
-        console.log("Received config:", { ...config, password: "***" }) // Debug log without password
+        // console.log("Received config:", { ...config, password: "***" }) // Debug log without password
 
         if (config.serverUrl && config.username && config.password) {
           console.log("Attempting to connect to Umami API...")
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
           try {
             const websiteData = await umamiApi.getAllWebsiteData()
-            console.log("Retrieved website data:", websiteData)
+            // console.log("Retrieved website data:", websiteData)
 
             if (websiteData.length > 0) {
               // Calculate summary

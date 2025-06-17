@@ -96,9 +96,9 @@ export class UmamiAPI {
     async getWebsites(): Promise<UmamiWebsite[]> {
         try {
             const data = await this.makeRequest("/api/websites")
-            console.log("Websites API response:", data) // Debug log
+            // console.log("Websites API response:", data) // Debug log
             const websites = data.data || data || []
-            console.log("Parsed websites:", websites) // Debug log
+            // console.log("Parsed websites:", websites) // Debug log
             return websites
         } catch (error) {
             console.error("Error fetching websites:", error)
@@ -117,22 +117,17 @@ export class UmamiAPI {
                 unit: 'day'
             })
 
-            console.log(`Fetching stats for website ${websiteId} with params:`, params.toString()) // Debug log
-
             // Try to get both general stats and sessions data
             const [generalStats, sessionsData] = await Promise.all([
                 this.makeRequest(`/api/websites/${websiteId}/stats?${params}`).catch(e => {
-                    console.log(`General stats failed:`, e)
+                    console.log(`Stats API failed for ${websiteId}`)
                     return null
                 }),
                 this.makeRequest(`/api/websites/${websiteId}/sessions?${params}`).catch(e => {
-                    console.log(`Sessions data failed:`, e)
+                    // Sessions endpoint might not exist in all Umami versions
                     return null
                 })
             ])
-
-            console.log(`General stats response for ${websiteId}:`, JSON.stringify(generalStats, null, 2))
-            console.log(`Sessions data response for ${websiteId}:`, JSON.stringify(sessionsData, null, 2))
 
             // Combine the data if we have sessions data
             if (generalStats && sessionsData) {
@@ -151,8 +146,6 @@ export class UmamiAPI {
 
     async getActiveUsers(websiteId: string): Promise<number> {
         try {
-            console.log(`Fetching active users for website ${websiteId}`) // Debug log
-
             // Try different endpoints for realtime data - updated for newer Umami versions
             const endpoints = [
                 // Umami v2+ format
@@ -166,9 +159,7 @@ export class UmamiAPI {
 
             for (const endpoint of endpoints) {
                 try {
-                    console.log(`Trying endpoint: ${endpoint}`)
                     const data = await this.makeRequest(endpoint)
-                    console.log(`Response from ${endpoint}:`, data)
 
                     // Handle different response formats
                     if (Array.isArray(data)) {
@@ -192,7 +183,6 @@ export class UmamiAPI {
                             }).length
 
                             if (activeCount > 0) {
-                                console.log(`Found ${activeCount} active users from array data`)
                                 return activeCount
                             }
                         }
@@ -211,36 +201,31 @@ export class UmamiAPI {
                         // For object responses
                         const count = data.value || data.count || data.active || data.visitors || data.total || 0
                         if (count > 0) {
-                            console.log(`Found ${count} active users from object data`)
                             return count
                         }
                     } else if (typeof data === 'number') {
                         // Direct number response
                         if (data > 0) {
-                            console.log(`Found ${data} active users from number response`)
                             return data
                         }
                     }
                 } catch (endpointError) {
-                    console.log(`Endpoint ${endpoint} failed:`, endpointError)
+                    // Continue to next endpoint
                     continue
                 }
             }
 
             // Enhanced fallback: Try to get recent unique visitors
-            console.log(`Trying enhanced fallback methods for ${websiteId}`)
             try {
                 const recentActiveUsers = await this.getRecentActiveUsers(websiteId)
                 if (recentActiveUsers > 0) {
-                    console.log(`Fallback method found ${recentActiveUsers} active users`)
                     return recentActiveUsers
                 }
             } catch (fallbackError) {
-                console.log(`Fallback method also failed:`, fallbackError)
+                // Fallback failed, return 0
             }
 
             // If all methods fail, return 0
-            console.log(`All realtime methods failed for website ${websiteId}`)
             return 0
         } catch (error) {
             console.error(`Error fetching active users for website ${websiteId}:`, error)
@@ -263,9 +248,7 @@ export class UmamiAPI {
                         unit: 'minute'
                     })
 
-                    console.log(`Method 1: Fetching recent unique visitors for ${websiteId}`)
                     const data = await this.makeRequest(`/api/websites/${websiteId}/stats?${params}`)
-                    console.log(`Recent stats response:`, data)
 
                     if (data && data.uniques && data.uniques.value) {
                         return Math.min(data.uniques.value, 100) // Cap at 100
@@ -284,9 +267,7 @@ export class UmamiAPI {
                         unit: 'minute'
                     })
 
-                    console.log(`Method 2: Fetching recent pageviews for ${websiteId}`)
                     const data = await this.makeRequest(`/api/websites/${websiteId}/pageviews?${params}`)
-                    console.log(`Recent pageviews response:`, data)
 
                     if (Array.isArray(data) && data.length > 0) {
                         const recentPageviews = data.reduce((sum, item) => sum + (item.y || item.value || 0), 0)
@@ -298,9 +279,7 @@ export class UmamiAPI {
 
                 // Method 3: Try sessions endpoint
                 async () => {
-                    console.log(`Method 3: Trying sessions endpoint for ${websiteId}`)
                     const data = await this.makeRequest(`/api/websites/${websiteId}/sessions/active`)
-                    console.log(`Active sessions response:`, data)
 
                     if (Array.isArray(data)) {
                         return Math.min(data.length, 100)
@@ -316,11 +295,10 @@ export class UmamiAPI {
                 try {
                     const result = await methods[i]()
                     if (result > 0) {
-                        console.log(`Method ${i + 1} succeeded with result: ${result}`)
                         return result
                     }
                 } catch (methodError) {
-                    console.log(`Method ${i + 1} failed:`, methodError)
+                    // Continue to next method
                 }
             }
 
@@ -333,13 +311,11 @@ export class UmamiAPI {
 
     async getAllWebsiteData() {
         const websites = await this.getWebsites()
-        console.log("Fetched websites for processing:", websites) // Debug log
         const results = []
 
         for (const website of websites) {
             // Use the correct ID field
             const websiteId = website.id || website.websiteId
-            console.log(`Processing website: ${website.name} (ID: ${websiteId})`) // Debug log
 
             if (!websiteId) {
                 console.error("Website missing ID:", website)
@@ -351,11 +327,6 @@ export class UmamiAPI {
                     this.getWebsiteStats(websiteId),
                     this.getActiveUsers(websiteId),
                 ])
-
-                console.log(`Stats for ${website.name}:`, {
-                    stats: JSON.stringify(stats, null, 2),
-                    activeUsers
-                })
 
                 if (stats) {
                     // More flexible handling of stats data structure
@@ -408,15 +379,6 @@ export class UmamiAPI {
                         sessions = Math.max(1, Math.floor(pageviews * 0.7)) // Rough estimation
                     }
 
-                    // Debug: Log raw values before calculation
-                    console.log(`Raw values for ${website.name}:`, {
-                        totaltime,
-                        totaltime_type: typeof stats.totaltime,
-                        totaltime_raw: stats.totaltime,
-                        visitors,
-                        sessions
-                    })
-
                     // Calculate average session time (in seconds)
                     // Umami's totaltime might be in milliseconds or seconds
                     let avgSessionTime = 0
@@ -424,26 +386,12 @@ export class UmamiAPI {
                         // If totaltime is very large, it's likely in milliseconds
                         const timeInSeconds = totaltime > 1000000 ? totaltime / 1000 : totaltime
                         avgSessionTime = Math.floor(timeInSeconds / sessions)
-
-                        console.log(`Time calculation for ${website.name}:`, {
-                            totaltime,
-                            timeInSeconds,
-                            sessions,
-                            avgSessionTime
-                        })
                     }
 
                     // Alternative calculation: use visitors if sessions data is unreliable
                     if (avgSessionTime === 0 && visitors > 0 && totaltime > 0) {
                         const timeInSeconds = totaltime > 1000000 ? totaltime / 1000 : totaltime
                         avgSessionTime = Math.floor(timeInSeconds / visitors)
-
-                        console.log(`Alternative time calculation for ${website.name}:`, {
-                            totaltime,
-                            timeInSeconds,
-                            visitors,
-                            avgSessionTime
-                        })
                     }
 
                     // Calculate bounce rate
@@ -451,16 +399,10 @@ export class UmamiAPI {
                         ? (bounces / pageviews) * 100
                         : 0
 
-                    console.log(`Processed data for ${website.name}:`, {
-                        pageviews,
-                        sessions,
-                        visitors,
-                        bounces,
-                        totaltime,
-                        avgSessionTime,
-                        bounceRate,
-                        currentOnline: activeUsers
-                    })
+                    // Only log if there are calculation issues
+                    if (avgSessionTime === 0 && totaltime > 0) {
+                        console.log(`${website.name}: Unable to calculate avg time - totaltime: ${totaltime}, sessions: ${sessions}, visitors: ${visitors}`)
+                    }
 
                     results.push({
                         id: websiteId,
@@ -483,7 +425,6 @@ export class UmamiAPI {
             }
         }
 
-        console.log("Final results:", results) // Debug log
         return results
     }
 } 
