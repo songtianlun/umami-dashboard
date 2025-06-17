@@ -55,6 +55,7 @@ export default function UmamiDashboard() {
   const [refreshInterval, setRefreshInterval] = useState(30000) // 30 seconds default
   const [dataSource, setDataSource] = useState<"mock" | "umami">("mock")
   const [statusMessage, setStatusMessage] = useState<string>("")
+  const [currentTime, setCurrentTime] = useState(new Date())
   const { toast } = useToast()
 
   const fetchData = async (showToast: boolean = true) => {
@@ -153,6 +154,12 @@ export default function UmamiDashboard() {
     }
   }, [refreshInterval, config])
 
+  // Update current time every second for relative time display
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
@@ -167,6 +174,15 @@ export default function UmamiDashboard() {
       return (num / 1000).toFixed(1) + "K"
     }
     return num.toString()
+  }
+
+  const getRelativeTime = (timestamp: Date) => {
+    const diff = Math.floor((currentTime.getTime() - timestamp.getTime()) / 1000)
+
+    if (diff < 60) return `${diff}秒前`
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+    return `${Math.floor(diff / 86400)}天前`
   }
 
   const handleConfigSave = (newConfig: LoginConfig) => {
@@ -197,13 +213,33 @@ export default function UmamiDashboard() {
               <Badge variant={dataSource === "umami" ? "default" : "secondary"}>
                 {dataSource === "umami" ? "实时数据" : "演示数据"}
               </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              过去 24 小时数据汇总 • 最后更新: {lastUpdated.toLocaleTimeString()}
-              {config && (
-                <span className="ml-2">• 服务器: {new URL(config.serverUrl).hostname}</span>
+              {loading && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  更新中
+                </div>
               )}
-            </p>
+            </div>
+            <div className="flex items-center gap-4 text-muted-foreground">
+              <span>过去 24 小时数据汇总</span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span className="text-xs">
+                  最后更新: {getRelativeTime(lastUpdated)}
+                  <span className="text-muted-foreground/70 ml-1">
+                    ({lastUpdated.toLocaleString('zh-CN', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })})
+                  </span>
+                </span>
+              </div>
+              {config && (
+                <span className="text-xs">• 服务器: {new URL(config.serverUrl).hostname}</span>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <AutoRefreshConfig
@@ -227,7 +263,21 @@ export default function UmamiDashboard() {
         )}
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">当前在线</CardTitle>
+              <div className="flex items-center">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
+              <p className="text-xs text-muted-foreground">实时访客</p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">总浏览量</CardTitle>
@@ -271,20 +321,6 @@ export default function UmamiDashboard() {
               <p className="text-xs text-muted-foreground">过去 24 小时</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">当前在线</CardTitle>
-              <div className="flex items-center">
-                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
-              <p className="text-xs text-muted-foreground">实时访客</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Debug/Test Section - only show if using demo data */}
@@ -302,7 +338,7 @@ export default function UmamiDashboard() {
             <CardDescription>按当前在线访客数降序排列 • 共 {websites.length} 个网站</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            <div className={`rounded-md border transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -317,19 +353,19 @@ export default function UmamiDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {websites.length === 0 && !loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        暂无网站数据
+                      </TableCell>
+                    </TableRow>
+                  ) : websites.length === 0 && loading ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                           加载中...
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : websites.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        暂无网站数据
                       </TableCell>
                     </TableRow>
                   ) : (
