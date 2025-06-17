@@ -12,6 +12,41 @@ body {
   }
 }
 
+/* Mobile-friendly styles */
+@layer components {
+  .mobile-card {
+    @apply transition-all duration-200 hover:shadow-md;
+  }
+
+  .mobile-stats-grid {
+    @apply grid grid-cols-2 gap-3 text-sm;
+  }
+
+  /* Ensure buttons are touch-friendly on mobile */
+  .btn-touch {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Optimize text legibility on small screens */
+  @media (max-width: 640px) {
+    .mobile-text-sm {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+
+    .mobile-heading {
+      font-size: 1.5rem;
+      line-height: 2rem;
+    }
+  }
+
+  /* Smooth scrolling for better mobile experience */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -48,6 +83,7 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -88,7 +124,8 @@ body {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground smooth-scroll;
   }
 }

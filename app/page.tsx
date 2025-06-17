@@ -264,29 +264,31 @@ export default function UmamiDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">Umami 统计面板</h1>
-              <Badge variant={dataSource === "umami" ? "default" : "secondary"}>
-                {dataSource === "umami" ? "实时数据" : "演示数据"}
-              </Badge>
-              {loading && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  更新中
-                </div>
-              )}
+        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Umami 统计面板</h1>
+              <div className="flex items-center gap-2">
+                <Badge variant={dataSource === "umami" ? "default" : "secondary"}>
+                  {dataSource === "umami" ? "实时数据" : "演示数据"}
+                </Badge>
+                {loading && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    更新中
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
               <span>过去 24 小时数据汇总</span>
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 <span className="text-xs">
                   最后更新: {getRelativeTime(lastUpdated)}
-                  <span className="text-muted-foreground/70 ml-1">
+                  <span className="text-muted-foreground/70 ml-1 hidden sm:inline">
                     ({lastUpdated.toLocaleString('zh-CN', {
                       month: '2-digit',
                       day: '2-digit',
@@ -297,17 +299,17 @@ export default function UmamiDashboard() {
                 </span>
               </div>
               {config && (
-                <span className="text-xs">• 服务器: {new URL(config.serverUrl).hostname}</span>
+                <span className="text-xs hidden md:inline">• 服务器: {new URL(config.serverUrl).hostname}</span>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <AutoRefreshConfig
               currentInterval={refreshInterval}
               onIntervalChange={handleRefreshIntervalChange}
             />
             <LoginConfigDialog onConfigSave={handleConfigSave} />
-            <Button onClick={() => fetchData(true)} disabled={loading} variant="outline" size="sm">
+            <Button onClick={() => fetchData(true)} disabled={loading} variant="outline" size="sm" className="w-full sm:w-auto">
               <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
               {loading ? "刷新中..." : "刷新数据"}
             </Button>
@@ -323,8 +325,8 @@ export default function UmamiDashboard() {
         )}
 
         {/* Summary Cards */}
-        <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-          <Card>
+        <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+          <Card className="col-span-2 sm:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">当前在线</CardTitle>
               <div className="flex items-center">
@@ -344,7 +346,7 @@ export default function UmamiDashboard() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
               <p className="text-xs text-muted-foreground">过去 24 小时</p>
             </CardContent>
           </Card>
@@ -355,7 +357,7 @@ export default function UmamiDashboard() {
               <MousePointer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
               <p className="text-xs text-muted-foreground">过去 24 小时</p>
             </CardContent>
           </Card>
@@ -366,7 +368,7 @@ export default function UmamiDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
               <p className="text-xs text-muted-foreground">过去 24 小时</p>
             </CardContent>
           </Card>
@@ -377,7 +379,7 @@ export default function UmamiDashboard() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
+              <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
               <p className="text-xs text-muted-foreground">过去 24 小时</p>
             </CardContent>
           </Card>
@@ -395,7 +397,7 @@ export default function UmamiDashboard() {
               <Globe className="h-5 w-5" />
               网站详细统计
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               按{
                 sortField === 'name' ? '网站名称' :
                   sortField === 'domain' ? '网站地址' :
@@ -409,137 +411,236 @@ export default function UmamiDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`rounded-md border transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                        onClick={() => handleSort('name')}
-                      >
-                        网站名称
-                        {getSortIcon('name')}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                        onClick={() => handleSort('domain')}
-                      >
-                        网站地址
-                        {getSortIcon('domain')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
-                        onClick={() => handleSort('currentOnline')}
-                      >
-                        当前在线
-                        {getSortIcon('currentOnline')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                        onClick={() => handleSort('pageviews')}
-                      >
-                        浏览量
-                        {getSortIcon('pageviews')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                        onClick={() => handleSort('sessions')}
-                      >
-                        访问次数
-                        {getSortIcon('sessions')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                        onClick={() => handleSort('visitors')}
-                      >
-                        访客数
-                        {getSortIcon('visitors')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                        onClick={() => handleSort('avgSessionTime')}
-                      >
-                        平均访问时间
-                        {getSortIcon('avgSessionTime')}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                        onClick={() => handleSort('bounceRate')}
-                      >
-                        跳出率
-                        {getSortIcon('bounceRate')}
-                      </button>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {websites.length === 0 && !loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        暂无网站数据
-                      </TableCell>
-                    </TableRow>
-                  ) : websites.length === 0 && loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                          加载中...
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    websites.map((website) => (
-                      <TableRow key={website.id}>
-                        <TableCell className="font-medium">
+            <div className={`transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {/* Mobile Sort Controls */}
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-medium">排序方式:</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={sortField}
+                      onChange={(e) => handleSort(e.target.value as SortField)}
+                      className="text-sm border rounded px-2 py-1 bg-background"
+                    >
+                      <option value="currentOnline">当前在线</option>
+                      <option value="name">网站名称</option>
+                      <option value="domain">网站地址</option>
+                      <option value="pageviews">浏览量</option>
+                      <option value="sessions">访问次数</option>
+                      <option value="visitors">访客数</option>
+                      <option value="avgSessionTime">访问时间</option>
+                      <option value="bounceRate">跳出率</option>
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                      className="p-2"
+                    >
+                      {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                {websites.length === 0 && !loading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    暂无网站数据
+                  </div>
+                ) : websites.length === 0 && loading ? (
+                  <div className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                      加载中...
+                    </div>
+                  </div>
+                ) : (
+                  websites.map((website) => (
+                    <Card key={website.id} className="p-4 mobile-card">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                            {website.name}
+                            <span className="font-medium truncate">{website.name}</span>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <a
-                            href={website.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            {website.domain}
-                          </a>
-                        </TableCell>
-                        <TableCell className="text-center">
                           <Badge
                             variant={website.currentOnline > 0 ? "default" : "secondary"}
                             className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
                           >
-                            {website.currentOnline}
+                            {website.currentOnline} 在线
                           </Badge>
+                        </div>
+                        <div>
+                          <a
+                            href={website.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline text-sm break-all"
+                          >
+                            {website.domain}
+                          </a>
+                        </div>
+                        <div className="mobile-stats-grid">
+                          <div>
+                            <span className="text-muted-foreground">浏览量:</span>
+                            <span className="ml-1 font-mono">{formatNumber(website.pageviews)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">访问次数:</span>
+                            <span className="ml-1 font-mono">{formatNumber(website.sessions)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">访客数:</span>
+                            <span className="ml-1 font-mono">{formatNumber(website.visitors)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">跳出率:</span>
+                            <span className="ml-1 font-mono">{website.bounceRate.toFixed(1)}%</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">平均访问时间:</span>
+                            <span className="ml-1 font-mono">{formatTime(website.avgSessionTime)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors"
+                          onClick={() => handleSort('name')}
+                        >
+                          网站名称
+                          {getSortIcon('name')}
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors"
+                          onClick={() => handleSort('domain')}
+                        >
+                          网站地址
+                          {getSortIcon('domain')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
+                          onClick={() => handleSort('currentOnline')}
+                        >
+                          当前在线
+                          {getSortIcon('currentOnline')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                          onClick={() => handleSort('pageviews')}
+                        >
+                          浏览量
+                          {getSortIcon('pageviews')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                          onClick={() => handleSort('sessions')}
+                        >
+                          访问次数
+                          {getSortIcon('sessions')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                          onClick={() => handleSort('visitors')}
+                        >
+                          访客数
+                          {getSortIcon('visitors')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                          onClick={() => handleSort('avgSessionTime')}
+                        >
+                          平均访问时间
+                          {getSortIcon('avgSessionTime')}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                          onClick={() => handleSort('bounceRate')}
+                        >
+                          跳出率
+                          {getSortIcon('bounceRate')}
+                        </button>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {websites.length === 0 && !loading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          暂无网站数据
                         </TableCell>
-                        <TableCell className="text-right font-mono">{formatNumber(website.pageviews)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatNumber(website.sessions)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatNumber(website.visitors)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatTime(website.avgSessionTime)}</TableCell>
-                        <TableCell className="text-right font-mono">{website.bounceRate.toFixed(1)}%</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : websites.length === 0 && loading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <div className="flex items-center justify-center">
+                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                            加载中...
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      websites.map((website) => (
+                        <TableRow key={website.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                              {website.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <a
+                              href={website.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {website.domain}
+                            </a>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={website.currentOnline > 0 ? "default" : "secondary"}
+                              className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
+                            >
+                              {website.currentOnline}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">{formatNumber(website.pageviews)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatNumber(website.sessions)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatNumber(website.visitors)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatTime(website.avgSessionTime)}</TableCell>
+                          <TableCell className="text-right font-mono">{website.bounceRate.toFixed(1)}%</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
