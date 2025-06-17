@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { LoginConfigDialog, getFullConfig } from "@/components/login-config"
+import { LoginConfigDialog, getFullConfig, LoginConfigDialogRef } from "@/components/login-config"
 import { AutoRefreshConfig } from "@/components/auto-refresh-config"
 import { RealtimeTest } from "@/components/realtime-test"
 import { useToast } from "@/hooks/use-toast"
@@ -73,7 +73,7 @@ export default function UmamiDashboard() {
     totalCurrentOnline: [] as Array<{ x: number, y: number }>
   })
   const [showConfigOnStart, setShowConfigOnStart] = useState(false)
-  const loginConfigRef = useRef<{ openDialog: () => void } | null>(null)
+  const loginConfigRef = useRef<LoginConfigDialogRef | null>(null)
   const { toast } = useToast()
 
   // 检查配置是否完整

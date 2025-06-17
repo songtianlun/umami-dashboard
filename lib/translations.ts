@@ -149,7 +149,7 @@ export const translations = {
     languageSettings: 'Language Settings',
     language: 'Language',
     english: 'English',
-    chinese: 'Chinese',
+    chinese: '简体中文',
     selectLanguage: 'Select Language',
     
     // 时间相关
@@ -333,7 +333,7 @@ export const translations = {
     languageSettings: '语言设置',
     language: '语言',
     english: 'English',
-    chinese: '中文',
+    chinese: '简体中文',
     selectLanguage: '选择语言',
     
     // 时间相关
