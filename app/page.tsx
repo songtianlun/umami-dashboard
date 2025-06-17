@@ -5,8 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp } from "lucide-react"
+import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LoginConfigDialog } from "@/components/login-config"
+import { AutoRefreshConfig } from "@/components/auto-refresh-config"
+import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface WebsiteStats {
   id: string
@@ -29,6 +33,12 @@ interface SummaryStats {
   totalCurrentOnline: number
 }
 
+interface LoginConfig {
+  serverUrl: string
+  username: string
+  password: string
+}
+
 export default function UmamiDashboard() {
   const [websites, setWebsites] = useState<WebsiteStats[]>([])
   const [summary, setSummary] = useState<SummaryStats>({
@@ -40,11 +50,23 @@ export default function UmamiDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [config, setConfig] = useState<LoginConfig | null>(null)
+  const [refreshInterval, setRefreshInterval] = useState(30000) // 30 seconds default
+  const [dataSource, setDataSource] = useState<"mock" | "umami">("mock")
+  const [statusMessage, setStatusMessage] = useState<string>("")
+  const { toast } = useToast()
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const response = await fetch("/api/umami/stats")
+      const headers: HeadersInit = {}
+
+      // Add config to headers if available
+      if (config) {
+        headers["x-umami-config"] = encodeURIComponent(JSON.stringify(config))
+      }
+
+      const response = await fetch("/api/umami/stats", { headers })
       const data = await response.json()
 
       // Sort by current online visitors (descending)
@@ -52,21 +74,56 @@ export default function UmamiDashboard() {
 
       setWebsites(sortedWebsites)
       setSummary(data.summary)
+      setDataSource(data.source)
+      setStatusMessage(data.message || data.error || "")
       setLastUpdated(new Date())
+
+      if (data.source === "umami") {
+        toast({
+          title: "数据更新成功",
+          description: `成功获取 ${data.websites.length} 个网站的数据`,
+        })
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error)
+      toast({
+        title: "数据获取失败",
+        description: "无法获取统计数据，请检查网络连接",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchData()
+    // Load config from localStorage
+    const savedConfig = localStorage.getItem("umami-config")
+    if (savedConfig) {
+      try {
+        setConfig(JSON.parse(savedConfig))
+      } catch (error) {
+        console.error("Failed to parse saved config:", error)
+      }
+    }
 
-    // Auto refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
+    // Load refresh interval from localStorage
+    const savedInterval = localStorage.getItem("umami-refresh-interval")
+    if (savedInterval) {
+      setRefreshInterval(parseInt(savedInterval))
+    }
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [config])
+
+  useEffect(() => {
+    if (refreshInterval > 0) {
+      const interval = setInterval(fetchData, refreshInterval)
+      return () => clearInterval(interval)
+    }
+  }, [refreshInterval, config])
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -84,20 +141,62 @@ export default function UmamiDashboard() {
     return num.toString()
   }
 
+  const handleConfigSave = (newConfig: LoginConfig) => {
+    setConfig(newConfig)
+    toast({
+      title: "配置已保存",
+      description: "正在获取最新数据...",
+    })
+  }
+
+  const handleRefreshIntervalChange = (interval: number) => {
+    setRefreshInterval(interval)
+    const intervalLabel = interval === 0 ? "禁用" : `${interval / 1000}秒`
+    toast({
+      title: "刷新间隔已更新",
+      description: `自动刷新已设置为: ${intervalLabel}`,
+    })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Umami 统计面板</h1>
-            <p className="text-muted-foreground">过去 24 小时数据汇总 • 最后更新: {lastUpdated.toLocaleTimeString()}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold tracking-tight">Umami 统计面板</h1>
+              <Badge variant={dataSource === "umami" ? "default" : "secondary"}>
+                {dataSource === "umami" ? "实时数据" : "演示数据"}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              过去 24 小时数据汇总 • 最后更新: {lastUpdated.toLocaleTimeString()}
+              {config && (
+                <span className="ml-2">• 服务器: {new URL(config.serverUrl).hostname}</span>
+              )}
+            </p>
           </div>
-          <Button onClick={fetchData} disabled={loading} variant="outline" size="sm">
-            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-            刷新数据
-          </Button>
+          <div className="flex gap-2">
+            <AutoRefreshConfig
+              currentInterval={refreshInterval}
+              onIntervalChange={handleRefreshIntervalChange}
+            />
+            <LoginConfigDialog onConfigSave={handleConfigSave} />
+            <Button onClick={fetchData} disabled={loading} variant="outline" size="sm">
+              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+              刷新数据
+            </Button>
+          </div>
         </div>
+
+        {/* Status Message */}
+        {statusMessage && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{statusMessage}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

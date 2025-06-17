@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { UmamiAPI } from "@/lib/umami-api"
 
-// Mock data generator
+// Mock data generator (fallback)
 function generateMockData() {
   const websites = [
     {
-      id: "1",
-      name: "主站官网",
-      domain: "example.com",
-      url: "https://example.com",
+      id: "demo-1",
+      name: "演示网站 1",
+      domain: "demo1.example.com",
+      url: "https://demo1.example.com",
       pageviews: Math.floor(Math.random() * 50000) + 10000,
       sessions: Math.floor(Math.random() * 15000) + 3000,
       visitors: Math.floor(Math.random() * 8000) + 2000,
@@ -16,10 +17,10 @@ function generateMockData() {
       bounceRate: Math.random() * 30 + 20,
     },
     {
-      id: "2",
-      name: "博客系统",
-      domain: "blog.example.com",
-      url: "https://blog.example.com",
+      id: "demo-2",
+      name: "演示网站 2",
+      domain: "demo2.example.com",
+      url: "https://demo2.example.com",
       pageviews: Math.floor(Math.random() * 30000) + 5000,
       sessions: Math.floor(Math.random() * 10000) + 2000,
       visitors: Math.floor(Math.random() * 6000) + 1500,
@@ -27,57 +28,8 @@ function generateMockData() {
       currentOnline: Math.floor(Math.random() * 30) + 2,
       bounceRate: Math.random() * 25 + 15,
     },
-    {
-      id: "3",
-      name: "在线商城",
-      domain: "shop.example.com",
-      url: "https://shop.example.com",
-      pageviews: Math.floor(Math.random() * 80000) + 20000,
-      sessions: Math.floor(Math.random() * 20000) + 5000,
-      visitors: Math.floor(Math.random() * 12000) + 3000,
-      avgSessionTime: Math.floor(Math.random() * 500) + 200,
-      currentOnline: Math.floor(Math.random() * 80) + 10,
-      bounceRate: Math.random() * 35 + 25,
-    },
-    {
-      id: "4",
-      name: "文档中心",
-      domain: "docs.example.com",
-      url: "https://docs.example.com",
-      pageviews: Math.floor(Math.random() * 25000) + 8000,
-      sessions: Math.floor(Math.random() * 8000) + 2500,
-      visitors: Math.floor(Math.random() * 5000) + 1800,
-      avgSessionTime: Math.floor(Math.random() * 600) + 300,
-      currentOnline: Math.floor(Math.random() * 25) + 3,
-      bounceRate: Math.random() * 20 + 10,
-    },
-    {
-      id: "5",
-      name: "API 服务",
-      domain: "api.example.com",
-      url: "https://api.example.com",
-      pageviews: Math.floor(Math.random() * 15000) + 3000,
-      sessions: Math.floor(Math.random() * 5000) + 1000,
-      visitors: Math.floor(Math.random() * 3000) + 800,
-      avgSessionTime: Math.floor(Math.random() * 200) + 60,
-      currentOnline: Math.floor(Math.random() * 15) + 1,
-      bounceRate: Math.random() * 40 + 30,
-    },
-    {
-      id: "6",
-      name: "移动应用",
-      domain: "app.example.com",
-      url: "https://app.example.com",
-      pageviews: Math.floor(Math.random() * 40000) + 12000,
-      sessions: Math.floor(Math.random() * 12000) + 4000,
-      visitors: Math.floor(Math.random() * 7000) + 2500,
-      avgSessionTime: Math.floor(Math.random() * 350) + 150,
-      currentOnline: Math.floor(Math.random() * 40) + 8,
-      bounceRate: Math.random() * 28 + 18,
-    },
   ]
 
-  // Calculate summary
   const summary = {
     totalPageviews: websites.reduce((sum, site) => sum + site.pageviews, 0),
     totalSessions: websites.reduce((sum, site) => sum + site.sessions, 0),
@@ -89,16 +41,90 @@ function generateMockData() {
   return { websites, summary }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // Check if we have Umami configuration
+    const configHeader = request.headers.get("x-umami-config")
 
-    const data = generateMockData()
+    if (configHeader) {
+      try {
+        const config = JSON.parse(decodeURIComponent(configHeader))
+        console.log("Received config:", { ...config, password: "***" }) // Debug log without password
 
-    return NextResponse.json(data)
+        if (config.serverUrl && config.username && config.password) {
+          console.log("Attempting to connect to Umami API...")
+          const umamiApi = new UmamiAPI(config)
+
+          try {
+            const websiteData = await umamiApi.getAllWebsiteData()
+            console.log("Retrieved website data:", websiteData)
+
+            if (websiteData.length > 0) {
+              // Calculate summary
+              const summary = {
+                totalPageviews: websiteData.reduce((sum, site) => sum + site.pageviews, 0),
+                totalSessions: websiteData.reduce((sum, site) => sum + site.sessions, 0),
+                totalVisitors: websiteData.reduce((sum, site) => sum + site.visitors, 0),
+                avgSessionTime: websiteData.length > 0
+                  ? Math.floor(websiteData.reduce((sum, site) => sum + site.avgSessionTime, 0) / websiteData.length)
+                  : 0,
+                totalCurrentOnline: websiteData.reduce((sum, site) => sum + site.currentOnline, 0),
+              }
+
+              return NextResponse.json({
+                websites: websiteData,
+                summary,
+                source: "umami"
+              })
+            } else {
+              console.log("No website data returned from Umami API")
+              // Fallback to mock data with message
+              const mockData = generateMockData()
+              return NextResponse.json({
+                ...mockData,
+                source: "mock",
+                message: "未能获取到网站数据，可能是权限问题或网站配置问题"
+              })
+            }
+          } catch (apiError) {
+            console.error("Umami API error:", apiError)
+            const mockData = generateMockData()
+            return NextResponse.json({
+              ...mockData,
+              source: "mock",
+              error: `Umami API 错误: ${apiError instanceof Error ? apiError.message : '未知错误'}`
+            })
+          }
+        }
+      } catch (configError) {
+        console.error("Error parsing Umami config:", configError)
+        const mockData = generateMockData()
+        return NextResponse.json({
+          ...mockData,
+          source: "mock",
+          error: "配置解析错误"
+        })
+      }
+    }
+
+    // Fallback to mock data
+    console.log("No valid config provided, using mock data")
+    const mockData = generateMockData()
+    return NextResponse.json({
+      ...mockData,
+      source: "mock",
+      message: "使用演示数据 - 请配置 Umami 连接以获取真实数据"
+    })
+
   } catch (error) {
     console.error("Error fetching Umami stats:", error)
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 })
+
+    // Return mock data on error
+    const mockData = generateMockData()
+    return NextResponse.json({
+      ...mockData,
+      source: "mock",
+      error: "获取数据时出现错误，显示演示数据"
+    })
   }
 }
