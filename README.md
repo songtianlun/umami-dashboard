@@ -1,42 +1,54 @@
 # Umami Dashboard
 
-一个现代化的 Umami 统计数据看板，提供实时的网站流量统计和监控功能。
+[English](README.md) | [中文](README.cn.md)
 
-## 功能特性
+A modern Umami analytics dashboard providing real-time website traffic statistics and monitoring capabilities.
 
-- 🚀 实时流量监控
-- 📊 多网站统计数据聚合
-- 📈 历史数据图表展示
-- ⚙️ 灵活的配置管理
-- 🔄 自动刷新设置
-- 💾 本地数据存储
-- 🌍 环境变量支持
+## Features
 
-## 环境变量配置
+- 🚀 Real-time traffic monitoring
+- 📊 Multi-website statistics aggregation
+- 📈 Historical data chart visualization
+- ⚙️ Flexible configuration management
+- 🔄 Auto-refresh settings
+- 💾 Local data storage
+- 🌍 Environment variable support
 
-为了更好的部署体验，本应用支持通过环境变量预设配置信息。配置获取优先级如下：
+## Quick Start
 
-1. **浏览器本地存储**：首先从 localStorage 读取用户保存的配置
-2. **环境变量**：如果本地存储没有配置，则从环境变量读取
+Start with Docker in one command:
 
-### 支持的环境变量
+```bash
+docker run -p 3000:3000 songtianlun/umami-dashboard:latest
+```
 
-| 环境变量名 | 描述 | 示例值 |
-|----------|------|--------|
-| `UMAMI_SERVER_URL` | Umami 服务器地址 | `https://analytics.yoursite.com` |
-| `UMAMI_USERNAME` | Umami 登录用户名 | `admin` |
-| `UMAMI_PASSWORD` | Umami 登录密码 | `your-password` |
+Then visit [http://localhost:3000](http://localhost:3000) to start using the dashboard.
 
-### 环境变量使用示例
+## Environment Variable Configuration
 
-#### Docker 部署
+For better deployment experience, this application supports pre-setting configuration through environment variables. Configuration priority is as follows:
+
+1. **Browser Local Storage**: First reads user-saved configuration from localStorage
+2. **Environment Variables**: If no local storage configuration exists, reads from environment variables
+
+### Supported Environment Variables
+
+| Environment Variable | Description | Example Value |
+|---------------------|-------------|---------------|
+| `UMAMI_SERVER_URL` | Umami server address | `https://analytics.yoursite.com` |
+| `UMAMI_USERNAME` | Umami login username | `admin` |
+| `UMAMI_PASSWORD` | Umami login password | `your-password` |
+
+### Environment Variable Usage Examples
+
+#### Docker Deployment
 ```bash
 docker run -d \
   -p 3000:3000 \
   -e UMAMI_SERVER_URL=https://analytics.yoursite.com \
   -e UMAMI_USERNAME=admin \
   -e UMAMI_PASSWORD=your-password \
-  umami-dashboard
+  songtianlun/umami-dashboard:latest
 ```
 
 #### Docker Compose
@@ -44,7 +56,7 @@ docker run -d \
 version: '3.8'
 services:
   umami-dashboard:
-    build: .
+    image: songtianlun/umami-dashboard:latest
     ports:
       - "3000:3000"
     environment:
@@ -53,116 +65,116 @@ services:
       - UMAMI_PASSWORD=your-password
 ```
 
-#### Vercel 部署
-在 Vercel 项目设置中添加环境变量：
+#### Vercel Deployment
+Add environment variables in Vercel project settings:
 - `UMAMI_SERVER_URL`
 - `UMAMI_USERNAME`  
 - `UMAMI_PASSWORD`
 
-#### 本地开发
-创建 `.env.local` 文件：
+#### Local Development
+Create `.env.local` file:
 ```bash
 UMAMI_SERVER_URL=https://analytics.yoursite.com
 UMAMI_USERNAME=admin
 UMAMI_PASSWORD=your-password
 ```
 
-## 快速开始
+## Development Environment Setup
 
-### 1. 安装依赖
+### 1. Install Dependencies
 ```bash
 npm install
-# 或
+# or
 pnpm install
-# 或
+# or
 yarn install
 ```
 
-### 2. 配置环境变量（可选）
-创建 `.env.local` 文件并添加你的 Umami 服务器配置。
+### 2. Configure Environment Variables (Optional)
+Create `.env.local` file and add your Umami server configuration.
 
-### 3. 启动开发服务器
+### 3. Start Development Server
 ```bash
 npm run dev
-# 或
+# or
 pnpm dev
-# 或
+# or
 yarn dev
 ```
 
-### 4. 打开浏览器
-访问 [http://localhost:3000](http://localhost:3000) 查看应用。
+### 4. Open Browser
+Visit [http://localhost:3000](http://localhost:3000) to view the application.
 
-## 配置管理
+## Configuration Management
 
-### 首次使用
-1. 点击右上角的"设置"按钮
-2. 填入你的 Umami 服务器信息：
-   - 服务器地址（如：https://analytics.yoursite.com）
-   - 用户名
-   - 密码
-3. 点击"测试连接"验证配置
-4. 点击"保存配置"完成设置
+### First-time Setup
+1. Click the "Settings" button in the top right corner
+2. Fill in your Umami server information:
+   - Server address (e.g., https://analytics.yoursite.com)
+   - Username
+   - Password
+3. Click "Test Connection" to verify configuration
+4. Click "Save Configuration" to complete setup
 
-### 配置重置
-- 点击设置对话框中的重置按钮（🔄）
-- 系统会清除本地保存的配置
-- 如果设置了环境变量，会自动读取环境变量中的配置
-- 如果没有环境变量，所有字段将被清空
+### Configuration Reset
+- Click the reset button (🔄) in the settings dialog
+- System will clear locally saved configuration
+- If environment variables are set, it will automatically read from environment variables
+- If no environment variables exist, all fields will be cleared
 
-### 配置优先级
-1. **用户手动配置**：用户在设置界面保存的配置具有最高优先级
-2. **环境变量配置**：当没有用户配置时，自动读取环境变量
-3. **空配置**：如果以上都没有，字段保持为空
+### Configuration Priority
+1. **User Manual Configuration**: User-saved configuration in settings interface has highest priority
+2. **Environment Variable Configuration**: Automatically reads environment variables when no user configuration exists
+3. **Empty Configuration**: If none of the above exist, fields remain empty
 
-## 技术栈
+## Tech Stack
 
-- **前端框架**：Next.js 14 (App Router)
-- **UI 组件**：Shadcn/ui + Tailwind CSS
-- **图表库**：Recharts
-- **状态管理**：React Hooks
-- **数据存储**：LocalStorage + Session History
-- **类型支持**：TypeScript
+- **Frontend Framework**: Next.js 14 (App Router)
+- **UI Components**: Shadcn/ui + Tailwind CSS
+- **Chart Library**: Recharts
+- **State Management**: React Hooks
+- **Data Storage**: LocalStorage + Session History
+- **Type Support**: TypeScript
 
-## 部署建议
+## Deployment Recommendations
 
-### 生产环境部署
-1. 使用环境变量设置默认配置
-2. 建议设置只读的默认配置，让用户根据需要覆盖
-3. 定期备份用户配置数据
+### Production Environment Deployment
+1. Use environment variables to set default configuration
+2. Recommend setting read-only default configuration, allowing users to override as needed
+3. Regularly backup user configuration data
 
-### 安全考虑
-- 环境变量中的密码信息请妥善保管
-- 建议为 Dashboard 创建专用的 Umami 账号
-- 在生产环境中使用 HTTPS
+### Security Considerations
+- Please securely manage password information in environment variables
+- Recommend creating dedicated Umami accounts for Dashboard
+- Use HTTPS in production environments
 
-## 开发指南
+## Development Guide
 
-### 项目结构
+### Project Structure
 ```
 ├── app/                    # Next.js App Router
-│   ├── api/umami/         # API 路由
-│   ├── globals.css        # 全局样式
-│   ├── layout.tsx         # 根布局
-│   └── page.tsx           # 主页面
-├── components/            # React 组件
-│   ├── ui/               # UI 基础组件
-│   ├── login-config.tsx  # 登录配置组件
+│   ├── api/umami/         # API routes
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Main page
+├── components/            # React components
+│   ├── ui/               # UI base components
+│   ├── login-config.tsx  # Login configuration component
 │   └── ...
-├── hooks/                # 自定义 Hooks
-├── lib/                  # 工具函数
-└── styles/               # 样式文件
+├── hooks/                # Custom Hooks
+├── lib/                  # Utility functions
+└── styles/               # Style files
 ```
 
-### 添加新功能
-1. 在 `components/` 目录下创建新组件
-2. 在 `app/api/umami/` 下添加 API 路由
-3. 更新主页面集成新功能
+### Adding New Features
+1. Create new components in `components/` directory
+2. Add API routes under `app/api/umami/`
+3. Update main page to integrate new features
 
-## 许可证
+## License
 
 MIT License
 
-## 贡献
+## Contributing
 
-欢迎提交 Issue 和 Pull Request！ 
+Issues and Pull Requests are welcome! 
