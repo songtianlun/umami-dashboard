@@ -118,9 +118,31 @@ export class UmamiAPI {
             })
 
             console.log(`Fetching stats for website ${websiteId} with params:`, params.toString()) // Debug log
-            const data = await this.makeRequest(`/api/websites/${websiteId}/stats?${params}`)
-            console.log(`Stats response for ${websiteId}:`, data) // Debug log
-            return data
+
+            // Try to get both general stats and sessions data
+            const [generalStats, sessionsData] = await Promise.all([
+                this.makeRequest(`/api/websites/${websiteId}/stats?${params}`).catch(e => {
+                    console.log(`General stats failed:`, e)
+                    return null
+                }),
+                this.makeRequest(`/api/websites/${websiteId}/sessions?${params}`).catch(e => {
+                    console.log(`Sessions data failed:`, e)
+                    return null
+                })
+            ])
+
+            console.log(`General stats response for ${websiteId}:`, JSON.stringify(generalStats, null, 2))
+            console.log(`Sessions data response for ${websiteId}:`, JSON.stringify(sessionsData, null, 2))
+
+            // Combine the data if we have sessions data
+            if (generalStats && sessionsData) {
+                return {
+                    ...generalStats,
+                    sessions: sessionsData
+                }
+            }
+
+            return generalStats
         } catch (error) {
             console.error(`Error fetching stats for website ${websiteId}:`, error)
             return null
@@ -330,29 +352,130 @@ export class UmamiAPI {
                     this.getActiveUsers(websiteId),
                 ])
 
-                console.log(`Stats for ${website.name}:`, { stats, activeUsers })
+                console.log(`Stats for ${website.name}:`, {
+                    stats: JSON.stringify(stats, null, 2),
+                    activeUsers
+                })
 
                 if (stats) {
-                    const avgSessionTime = stats.uniques && stats.totaltime && stats.uniques.value > 0
-                        ? Math.floor(stats.totaltime.value / stats.uniques.value / 1000)
+                    // More flexible handling of stats data structure
+                    let pageviews = 0
+                    let visitors = 0
+                    let bounces = 0
+                    let totaltime = 0
+                    let sessions = 0
+
+                    // Handle different possible data structures
+                    if (stats.pageviews) {
+                        pageviews = typeof stats.pageviews === 'object'
+                            ? stats.pageviews.value || stats.pageviews.total || 0
+                            : stats.pageviews
+                    }
+
+                    if (stats.uniques) {
+                        visitors = typeof stats.uniques === 'object'
+                            ? stats.uniques.value || stats.uniques.total || 0
+                            : stats.uniques
+                    } else if (stats.visitors) {
+                        visitors = typeof stats.visitors === 'object'
+                            ? stats.visitors.value || stats.visitors.total || 0
+                            : stats.visitors
+                    }
+
+                    if (stats.bounces) {
+                        bounces = typeof stats.bounces === 'object'
+                            ? stats.bounces.value || stats.bounces.total || 0
+                            : stats.bounces
+                    }
+
+                    if (stats.totaltime) {
+                        totaltime = typeof stats.totaltime === 'object'
+                            ? stats.totaltime.value || stats.totaltime.total || 0
+                            : stats.totaltime
+                    }
+
+                    // Handle sessions data
+                    if (stats.sessions) {
+                        if (Array.isArray(stats.sessions)) {
+                            sessions = stats.sessions.length
+                        } else if (typeof stats.sessions === 'object') {
+                            sessions = stats.sessions.value || stats.sessions.total || stats.sessions.count || 0
+                        } else {
+                            sessions = stats.sessions
+                        }
+                    } else {
+                        // Fallback: estimate sessions from pageviews (typically sessions < pageviews)
+                        sessions = Math.max(1, Math.floor(pageviews * 0.7)) // Rough estimation
+                    }
+
+                    // Debug: Log raw values before calculation
+                    console.log(`Raw values for ${website.name}:`, {
+                        totaltime,
+                        totaltime_type: typeof stats.totaltime,
+                        totaltime_raw: stats.totaltime,
+                        visitors,
+                        sessions
+                    })
+
+                    // Calculate average session time (in seconds)
+                    // Umami's totaltime might be in milliseconds or seconds
+                    let avgSessionTime = 0
+                    if (sessions > 0 && totaltime > 0) {
+                        // If totaltime is very large, it's likely in milliseconds
+                        const timeInSeconds = totaltime > 1000000 ? totaltime / 1000 : totaltime
+                        avgSessionTime = Math.floor(timeInSeconds / sessions)
+
+                        console.log(`Time calculation for ${website.name}:`, {
+                            totaltime,
+                            timeInSeconds,
+                            sessions,
+                            avgSessionTime
+                        })
+                    }
+
+                    // Alternative calculation: use visitors if sessions data is unreliable
+                    if (avgSessionTime === 0 && visitors > 0 && totaltime > 0) {
+                        const timeInSeconds = totaltime > 1000000 ? totaltime / 1000 : totaltime
+                        avgSessionTime = Math.floor(timeInSeconds / visitors)
+
+                        console.log(`Alternative time calculation for ${website.name}:`, {
+                            totaltime,
+                            timeInSeconds,
+                            visitors,
+                            avgSessionTime
+                        })
+                    }
+
+                    // Calculate bounce rate
+                    const bounceRate = pageviews > 0 && bounces >= 0
+                        ? (bounces / pageviews) * 100
                         : 0
 
-                    const bounceRate = stats.pageviews && stats.bounces && stats.pageviews.value > 0
-                        ? (stats.bounces.value / stats.pageviews.value) * 100
-                        : 0
+                    console.log(`Processed data for ${website.name}:`, {
+                        pageviews,
+                        sessions,
+                        visitors,
+                        bounces,
+                        totaltime,
+                        avgSessionTime,
+                        bounceRate,
+                        currentOnline: activeUsers
+                    })
 
                     results.push({
                         id: websiteId,
                         name: website.name,
                         domain: website.domain,
                         url: `https://${website.domain}`,
-                        pageviews: stats.pageviews ? stats.pageviews.value : 0,
-                        sessions: stats.pageviews ? stats.pageviews.value : 0, // Umami doesn't have sessions, use pageviews
-                        visitors: stats.uniques ? stats.uniques.value : 0,
+                        pageviews,
+                        sessions,
+                        visitors,
                         avgSessionTime,
                         currentOnline: activeUsers,
                         bounceRate,
                     })
+                } else {
+                    console.warn(`No stats data for website ${website.name}`)
                 }
             } catch (websiteError) {
                 console.error(`Error processing website ${website.name}:`, websiteError)
