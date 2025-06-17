@@ -38,8 +38,8 @@ For better deployment experience, this application supports pre-setting configur
 | `UMAMI_SERVER_URL` | Umami server address | `https://analytics.yoursite.com` |
 | `UMAMI_USERNAME` | Umami login username | `admin` |
 | `UMAMI_PASSWORD` | Umami login password | `your-password` |
-| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami analytics script URL | `https://umami.frytea.com/script.js` |
-| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami website ID | `f7438333-3487-4446-bdb9-c47b35016ccf` |
+| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami analytics script URL | `https://umami.xxx.com/script.js` |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami website ID | `xxx` |
 
 ### Environment Variable Usage Examples
 

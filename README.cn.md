@@ -38,8 +38,8 @@ docker run -p 3000:3000 songtianlun/umami-dashboard:latest
 | `UMAMI_SERVER_URL` | Umami 服务器地址 | `https://analytics.yoursite.com` |
 | `UMAMI_USERNAME` | Umami 登录用户名 | `admin` |
 | `UMAMI_PASSWORD` | Umami 登录密码 | `your-password` |
-| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami 统计脚本 URL | `https://umami.frytea.com/script.js` |
-| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami 网站 ID | `f7438333-3487-4446-bdb9-c47b35016ccf` |
+| `NEXT_PUBLIC_UMAMI_ANALYTICS_URL` | Umami 统计脚本 URL | `https://umami.xxx.com/script.js` |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami 网站 ID | `xxxx` |
 
 ### 环境变量使用示例
 
