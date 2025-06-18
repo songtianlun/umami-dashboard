@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     // Check if we have Umami configuration
     const configHeader = request.headers.get("x-umami-config")
+    const timeRangeHeader = request.headers.get("x-time-range")
 
     if (!configHeader) {
       return NextResponse.json({
@@ -15,6 +16,16 @@ export async function GET(request: NextRequest) {
 
     try {
       const config = JSON.parse(decodeURIComponent(configHeader))
+      let timeRange = undefined
+
+      // 解析时间范围参数
+      if (timeRangeHeader) {
+        try {
+          timeRange = JSON.parse(decodeURIComponent(timeRangeHeader))
+        } catch (e) {
+          console.warn("Invalid time range header:", e)
+        }
+      }
 
       if (!config.serverUrl || !config.username || !config.password) {
         return NextResponse.json({
@@ -27,7 +38,7 @@ export async function GET(request: NextRequest) {
       const umamiApi = new UmamiAPI(config)
 
       try {
-        const websiteData = await umamiApi.getAllWebsiteData()
+        const websiteData = await umamiApi.getAllWebsiteData(timeRange)
 
         if (websiteData.length > 0) {
           // Calculate summary

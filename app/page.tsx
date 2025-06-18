@@ -19,6 +19,7 @@ import { formatVersionInfo, getCopyrightYears } from "@/lib/version"
 import { useI18n } from "@/components/i18n-provider"
 import { LanguageConfig } from "@/components/language-config"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TimeRangeConfig, TimeRangeValue, getSavedTimeRange, getTimeRangeTimestamps } from "@/components/time-range-config"
 
 interface WebsiteStats {
   id: string
@@ -52,7 +53,7 @@ type SortDirection = 'asc' | 'desc'
 
 export default function UmamiDashboard() {
   const { t, locale } = useI18n()
-  
+
   const [websites, setWebsites] = useState<WebsiteStats[]>([])
   const [summary, setSummary] = useState<SummaryStats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -73,6 +74,7 @@ export default function UmamiDashboard() {
     totalCurrentOnline: [] as Array<{ x: number, y: number }>
   })
   const [showConfigOnStart, setShowConfigOnStart] = useState(false)
+  const [timeRange, setTimeRange] = useState<TimeRangeValue>('24h')
   const loginConfigRef = useRef<LoginConfigDialogRef | null>(null)
   const { toast } = useToast()
 
@@ -89,7 +91,7 @@ export default function UmamiDashboard() {
       setDataSource("not-configured")
       setLoading(false)
       setInitialLoad(false)
-      
+
       if (showToast) {
         toast({
           title: t('configurationIncomplete'),
@@ -120,6 +122,10 @@ export default function UmamiDashboard() {
       if (config) {
         headers["x-umami-config"] = encodeURIComponent(JSON.stringify(config))
       }
+
+      // Add time range to headers
+      const timeRangeTimestamps = getTimeRangeTimestamps(timeRange)
+      headers["x-time-range"] = encodeURIComponent(JSON.stringify(timeRangeTimestamps))
 
       const response = await fetch("/api/umami/stats", { headers })
       const data = await response.json()
@@ -194,7 +200,7 @@ export default function UmamiDashboard() {
     // 使用新的配置获取方式（优先localStorage，后备环境变量）
     getFullConfig().then((loadedConfig) => {
       setConfig(loadedConfig)
-      
+
       // 检查是否需要显示配置对话框
       if (!isConfigComplete(loadedConfig)) {
         setShowConfigOnStart(true)
@@ -209,6 +215,10 @@ export default function UmamiDashboard() {
     if (savedInterval) {
       setRefreshInterval(parseInt(savedInterval))
     }
+
+    // Load time range from localStorage
+    const savedTimeRange = getSavedTimeRange()
+    setTimeRange(savedTimeRange)
   }, [t])
 
   // 首次加载时检查配置
@@ -265,6 +275,13 @@ export default function UmamiDashboard() {
       setWebsites(sortedWebsites)
     }
   }, [sortField, sortDirection])
+
+  // 重新获取数据当时间范围改变时
+  useEffect(() => {
+    if (config && isConfigComplete(config)) {
+      fetchData(false) // 时间范围改变时不显示toast
+    }
+  }, [timeRange])
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -345,8 +362,8 @@ export default function UmamiDashboard() {
     if (sortField !== field) {
       return <ChevronsUpDown className="h-4 w-4 opacity-50" />
     }
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4" /> : 
+    return sortDirection === 'asc' ?
+      <ChevronUp className="h-4 w-4" /> :
       <ChevronDown className="h-4 w-4" />
   }
 
@@ -357,7 +374,7 @@ export default function UmamiDashboard() {
       setDataSource("loading")
       fetchData(true)
     }
-    
+
     toast({
       title: t('configurationSaved'),
       description: t('configurationSavedDescription'),
@@ -371,6 +388,44 @@ export default function UmamiDashboard() {
       title: t('refreshIntervalUpdated'),
       description: t('autoRefreshSetTo', { interval: intervalLabel }),
     })
+  }
+
+  const handleTimeRangeChange = (range: TimeRangeValue) => {
+    setTimeRange(range)
+  }
+
+  // 生成 Umami 详情页面链接
+  const getUmamiWebsiteUrl = (websiteId: string) => {
+    if (config?.serverUrl) {
+      try {
+        const baseUrl = config.serverUrl.replace(/\/+$/, '') // 去除末尾斜杠
+        return `${baseUrl}/websites/${websiteId}`
+      } catch (error) {
+        console.error('Error generating Umami URL:', error)
+        return null
+      }
+    }
+    return null
+  }
+
+  // 获取时间范围的描述文本
+  const getTimeRangeDescription = (range: TimeRangeValue) => {
+    switch (range) {
+      case '24h':
+        return t('past24Hours')
+      case 'today':
+        return t('today')
+      case 'week':
+        return t('thisWeek')
+      case '7d':
+        return t('last7Days')
+      case 'month':
+        return t('thisMonth')
+      case '30d':
+        return t('last30Days')
+      default:
+        return t('past24Hours')
+    }
   }
 
   const getServerHostname = (serverUrl: string) => {
@@ -421,7 +476,7 @@ export default function UmamiDashboard() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                <span>{t('timeDataSummary')}</span>
+                <span>{getTimeRangeDescription(timeRange)} 数据汇总</span>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   <span className="text-xs">
@@ -442,6 +497,10 @@ export default function UmamiDashboard() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
+              <TimeRangeConfig
+                currentRange={timeRange}
+                onRangeChange={handleTimeRangeChange}
+              />
               <LanguageConfig />
               <AutoRefreshConfig
                 currentInterval={refreshInterval}
@@ -451,11 +510,11 @@ export default function UmamiDashboard() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Button 
-                      onClick={() => fetchData(true)} 
-                      disabled={loading || !configComplete} 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      onClick={() => fetchData(true)}
+                      disabled={loading || !configComplete}
+                      variant="outline"
+                      size="sm"
                       className="w-full sm:w-auto"
                     >
                       <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
@@ -507,7 +566,7 @@ export default function UmamiDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
-                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                    <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
 
@@ -519,7 +578,7 @@ export default function UmamiDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
-                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                    <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
 
@@ -531,7 +590,7 @@ export default function UmamiDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
-                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                    <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
 
@@ -543,7 +602,7 @@ export default function UmamiDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
-                    <p className="text-xs text-muted-foreground">{t('past24Hours')}</p>
+                    <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
               </>
@@ -564,25 +623,25 @@ export default function UmamiDashboard() {
                 <LoadingCard
                   title={t('totalPageviews')}
                   icon={<Eye className="h-4 w-4 text-muted-foreground" />}
-                  description={t('past24Hours')}
+                  description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('totalSessions')}
                   icon={<MousePointer className="h-4 w-4 text-muted-foreground" />}
-                  description={t('past24Hours')}
+                  description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('totalVisitors')}
                   icon={<Users className="h-4 w-4 text-muted-foreground" />}
-                  description={t('past24Hours')}
+                  description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('averageSessionTime')}
                   icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-                  description={t('past24Hours')}
+                  description={getTimeRangeDescription(timeRange)}
                 />
               </>
             )}
@@ -601,8 +660,8 @@ export default function UmamiDashboard() {
                 {t('detailedWebsiteStats')}
               </CardTitle>
               <CardDescription className="text-sm">
-                {t('sortedBy', { 
-                  field: getSortFieldLabel(sortField), 
+                {t('sortedBy', {
+                  field: getSortFieldLabel(sortField),
                   direction: t(sortDirection === 'asc' ? 'ascending' : 'descending')
                 })} • {t('totalWebsites', { count: websites.length })}
               </CardDescription>
@@ -658,7 +717,19 @@ export default function UmamiDashboard() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                              <span className="font-medium truncate">{website.name}</span>
+                              {getUmamiWebsiteUrl(website.id) ? (
+                                <a
+                                  href={getUmamiWebsiteUrl(website.id)!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-blue-600 hover:underline truncate"
+                                  title={t('viewInUmami')}
+                                >
+                                  {website.name}
+                                </a>
+                              ) : (
+                                <span className="font-medium truncate">{website.name}</span>
+                              )}
                             </div>
                             <Badge
                               variant={website.currentOnline > 0 ? "default" : "secondary"}
@@ -806,7 +877,19 @@ export default function UmamiDashboard() {
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                                {website.name}
+                                {getUmamiWebsiteUrl(website.id) ? (
+                                  <a
+                                    href={getUmamiWebsiteUrl(website.id)!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                    title={t('viewInUmami')}
+                                  >
+                                    {website.name}
+                                  </a>
+                                ) : (
+                                  <span>{website.name}</span>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>

@@ -106,10 +106,10 @@ export class UmamiAPI {
         }
     }
 
-    async getWebsiteStats(websiteId: string): Promise<UmamiStats | null> {
+    async getWebsiteStats(websiteId: string, timeRange?: { startAt: number, endAt: number }): Promise<UmamiStats | null> {
         try {
-            const endAt = Date.now()
-            const startAt = endAt - 24 * 60 * 60 * 1000 // 24 hours ago
+            const endAt = timeRange?.endAt || Date.now()
+            const startAt = timeRange?.startAt || (endAt - 24 * 60 * 60 * 1000) // 24 hours ago
 
             const params = new URLSearchParams({
                 startAt: startAt.toString(),
@@ -309,7 +309,7 @@ export class UmamiAPI {
         }
     }
 
-    async getAllWebsiteData() {
+    async getAllWebsiteData(timeRange?: { startAt: number, endAt: number }) {
         const websites = await this.getWebsites()
         const results = []
 
@@ -324,7 +324,7 @@ export class UmamiAPI {
 
             try {
                 const [stats, activeUsers] = await Promise.all([
-                    this.getWebsiteStats(websiteId),
+                    this.getWebsiteStats(websiteId, timeRange),
                     this.getActiveUsers(websiteId),
                 ])
 
