@@ -85,8 +85,8 @@ UMAMI_PASSWORD=your-password
 NEXT_PUBLIC_ANALYTICS_SCRIPT='<script defer src="https://umami.frytea.com/script.js" data-website-id="f7438333-3487-4446-bdb9-c47b35016ccf"></script>'
 
 # Method 2: Separate configuration (comment out the following two lines if using method 1)
-# NEXT_PUBLIC_UMAMI_ANALYTICS_URL=https://umami.frytea.com/script.js
-# NEXT_PUBLIC_UMAMI_WEBSITE_ID=f7438333-3487-4446-bdb9-c47b35016ccf
+# NEXT_PUBLIC_UMAMI_ANALYTICS_URL=https://umami.xxx.com/script.js
+# NEXT_PUBLIC_UMAMI_WEBSITE_ID=xxxxxx
 ```
 
 ## Development Environment Setup
