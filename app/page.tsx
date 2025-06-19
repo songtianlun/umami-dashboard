@@ -726,25 +726,27 @@ export default function UmamiDashboard() {
         </div>
 
         {/* Version Info Footer */}
-        <div className="container mx-auto px-4 py-6 border-t border-border/40 bg-muted/10 sm:bg-transparent">
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-4">
-            {/* 左侧：产品信息 */}
-            <div className="flex flex-col items-center gap-1 sm:flex-row sm:items-center sm:gap-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                <span>Umami Dashboard</span>
+        <div className="border-t border-border/40 bg-muted/10 sm:bg-transparent">
+          <div className="container mx-auto p-4 md:p-6">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-4">
+              {/* 左侧：产品信息 */}
+              <div className="flex flex-col items-center gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                  <span>Umami Dashboard</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="hidden sm:inline">•</span>
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-mono">
+                    {formatVersionInfo()}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="hidden sm:inline">•</span>
-                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-mono">
-                  {formatVersionInfo()}
-                </span>
+              
+              {/* 右侧：版权信息 */}
+              <div className="text-xs text-muted-foreground">
+                <span>© {getCopyrightYears()} • All rights reserved</span>
               </div>
-            </div>
-            
-            {/* 右侧：版权信息 */}
-            <div className="text-xs text-muted-foreground">
-              <span>© {getCopyrightYears()} • All rights reserved</span>
             </div>
           </div>
         </div>
