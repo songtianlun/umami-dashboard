@@ -161,6 +161,11 @@ export const translations = {
     enterWebsiteId: 'Enter website ID (e.g., 2-cgs)',
     testRealtimeData: 'Test Live Data',
     testResults: 'Results:',
+    websiteId: 'Website ID:',
+    currentOnlineVisitors: 'Online Visitors:',
+    error: 'Error:',
+    apiEndpointTest: 'API Endpoint Test:',
+    debugInfo: 'Debug Info:',
 
     // 语言设置
     languageSettings: 'Language',
@@ -370,6 +375,11 @@ export const translations = {
     enterWebsiteId: '输入网站 ID（如：2-cgs）',
     testRealtimeData: '测试实时数据',
     testResults: '测试结果:',
+    websiteId: '网站 ID:',
+    currentOnlineVisitors: '在线访客:',
+    error: '错误:',
+    apiEndpointTest: 'API 端点测试:',
+    debugInfo: '调试信息:',
 
     // 语言设置
     languageSettings: '语言设置',

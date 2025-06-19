@@ -229,7 +229,7 @@ export function WebsiteTable({
 
           {/* 排序和页面大小控件 */}
           <div className="flex items-center gap-2">
-            <Label className="text-sm whitespace-nowrap">排序:</Label>
+            <Label className="text-sm whitespace-nowrap">{t('sortBy')}:</Label>
             <Select
               value={sortField}
               onValueChange={(value: SortField) => handleSort(value)}

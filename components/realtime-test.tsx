@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import * as React from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TestTube, Loader2, RefreshCw } from "lucide-react"
+import { useI18n } from "@/components/i18n-provider"
 
 interface RealtimeTestProps {
     config: {
@@ -20,6 +20,7 @@ interface RealtimeTestProps {
 }
 
 export function RealtimeTest({ config }: RealtimeTestProps) {
+    const { t } = useI18n()
     const [websiteId, setWebsiteId] = useState("")
     const [testing, setTesting] = useState(false)
     const [results, setResults] = useState<any>(null)
@@ -107,10 +108,10 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <TestTube className="h-5 w-5" />
-                        实时数据测试
+                        {t('realtimeDataTest')}
                     </CardTitle>
                     <CardDescription>
-                        请先配置 Umami 连接信息
+                        {t('configureUmamiFirst')}
                     </CardDescription>
                 </CardHeader>
             </Card>
@@ -122,10 +123,10 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <TestTube className="h-5 w-5" />
-                    实时数据测试
+                    {t('realtimeDataTest')}
                 </CardTitle>
                 <CardDescription>
-                    测试特定网站的实时访客数据获取
+                    {t('realtimeDataTestDescription')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -133,7 +134,7 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                 {websites.length > 0 && (
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label>选择网站</Label>
+                            <Label>{t('selectWebsite')}</Label>
                             <Button
                                 onClick={loadWebsites}
                                 disabled={loadingWebsites}
@@ -145,7 +146,7 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                         </div>
                         <Select value={websiteId} onValueChange={setWebsiteId}>
                             <SelectTrigger>
-                                <SelectValue placeholder="选择要测试的网站" />
+                                <SelectValue placeholder={t('selectWebsiteToTest')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {websites.map((website) => (
@@ -162,10 +163,10 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                 )}
 
                 <div className="space-y-2">
-                    <Label htmlFor="websiteId">网站 ID（手动输入）</Label>
+                    <Label htmlFor="websiteId">{t('websiteIdManualInput')}</Label>
                     <Input
                         id="websiteId"
-                        placeholder="输入网站 ID（如：2-cgs）"
+                        placeholder={t('enterWebsiteId')}
                         value={websiteId}
                         onChange={(e) => setWebsiteId(e.target.value)}
                     />
@@ -179,12 +180,12 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                     {testing ? (
                         <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            测试中...
+                            {t('testing')}
                         </>
                     ) : (
                         <>
                             <TestTube className="h-4 w-4 mr-2" />
-                            测试实时数据
+                            {t('testRealtimeData')}
                         </>
                     )}
                 </Button>
@@ -197,21 +198,21 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
 
                 {results && (
                     <div className="space-y-3">
-                        <h4 className="font-medium">测试结果:</h4>
+                        <h4 className="font-medium">{t('testResults')}</h4>
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <span>网站 ID:</span>
+                                <span>{t('websiteId')}</span>
                                 <Badge variant="outline">{results.websiteId}</Badge>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span>当前在线访客:</span>
+                                <span>{t('currentOnlineVisitors')}</span>
                                 <Badge variant={results.activeUsers > 0 ? "default" : "secondary"}>
                                     {results.activeUsers}
                                 </Badge>
                             </div>
                             {results.error && (
                                 <div className="flex items-center justify-between">
-                                    <span>错误:</span>
+                                    <span>{t('error')}</span>
                                     <Badge variant="destructive">{results.error}</Badge>
                                 </div>
                             )}
@@ -219,7 +220,7 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
 
                         {/* Detailed endpoint results */}
                         <div className="space-y-2">
-                            <h5 className="text-sm font-medium">API 端点测试:</h5>
+                            <h5 className="text-sm font-medium">{t('apiEndpointTest')}</h5>
                             {Object.entries(results.endpoints || {}).map(([endpoint, result]: [string, any]) => (
                                 <div key={endpoint} className="border rounded p-2 text-xs space-y-1">
                                     <div className="font-mono text-xs break-all">{endpoint}</div>
@@ -248,7 +249,7 @@ export function RealtimeTest({ config }: RealtimeTestProps) {
                         {/* Debug info */}
                         {results.debugInfo && results.debugInfo.length > 0 && (
                             <div className="space-y-1">
-                                <h5 className="text-sm font-medium">调试信息:</h5>
+                                <h5 className="text-sm font-medium">{t('debugInfo')}</h5>
                                 {results.debugInfo.map((info: string, index: number) => (
                                     <div key={index} className="text-xs text-muted-foreground">{info}</div>
                                 ))}
