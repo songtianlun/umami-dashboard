@@ -52,9 +52,9 @@ export function AutoRefreshConfig({ currentInterval, onIntervalChange, trigger }
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto sm:min-w-[140px] justify-start">
                         <Timer className="h-4 w-4 mr-2" />
-                        {t('autoRefreshSettings')}: {getCurrentIntervalLabel()}
+                        <span className="truncate">{t('autoRefreshSettings')}: {getCurrentIntervalLabel()}</span>
                     </Button>
                 )}
             </DialogTrigger>

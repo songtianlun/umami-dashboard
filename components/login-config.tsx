@@ -232,7 +232,7 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
                         {trigger || (
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto sm:min-w-[100px]">
                                 <Settings className="h-4 w-4 mr-2" />
                                 {t('settings')}
                             </Button>

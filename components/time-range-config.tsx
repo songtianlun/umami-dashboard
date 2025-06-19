@@ -59,7 +59,7 @@ export function TimeRangeConfig({ currentRange, onRangeChange, trigger }: TimeRa
 
     return (
         <Select value={currentRange} onValueChange={handleRangeChange}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-auto sm:min-w-[140px] h-9">
                 {trigger || (
                     <>
                         <Clock className="h-4 w-4 mr-2" />
