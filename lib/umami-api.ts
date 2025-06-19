@@ -99,9 +99,9 @@ export class UmamiAPI {
     async getWebsites(): Promise<UmamiWebsite[]> {
         try {
             const data = await this.makeRequest("/api/websites")
-            console.log("Websites API response:", data) // 启用调试日志
+            // console.log("Websites API response:", data) // 关闭调试日志
             const websites = data.data || data || []
-            console.log("Parsed websites:", websites) // 启用调试日志
+            // console.log("Parsed websites:", websites) // 关闭调试日志
             return websites
         } catch (error) {
             console.error("Error fetching websites:", error)
@@ -109,72 +109,78 @@ export class UmamiAPI {
         }
     }
 
-    // 修复getAllWebsites方法，先测试基础API是否工作
+    // 获取所有网站数据 - 根据Umami API文档优化
     async getAllWebsites(): Promise<UmamiWebsite[]> {
         try {
             console.log("开始获取所有网站数据...")
             
-            // 首先尝试基础API调用，不带任何分页参数
-            let websites = await this.getWebsites()
-            console.log(`基础API返回 ${websites.length} 个网站`)
+            // 根据Umami官方API文档，先尝试基础调用
+            const data = await this.makeRequest("/api/websites")
+            // console.log("Raw API response:", JSON.stringify(data, null, 2))
             
-            // 如果网站数量看起来被截断了（通常API会返回整数倍的数量，如10, 20, 50, 100）
-            // 并且数量正好是10、20、50或100，可能存在分页
+            // 处理不同的响应格式
+            let websites: UmamiWebsite[] = []
+            
+            if (data.data && Array.isArray(data.data)) {
+                websites = data.data
+                console.log("使用data.data格式，网站数量:", websites.length)
+            } else if (Array.isArray(data)) {
+                websites = data
+                console.log("使用直接数组格式，网站数量:", websites.length)
+            } else {
+                console.log("未知的响应格式:", typeof data, data)
+                websites = []
+            }
+
             const possiblePageSizes = [10, 20, 50, 100]
             const needsPagination = possiblePageSizes.includes(websites.length) && websites.length > 0
-            
             if (needsPagination) {
-                console.log(`检测到可能的分页（当前返回${websites.length}个），尝试获取更多数据...`)
-                
-                // 尝试Umami API的正确分页格式
+                console.log("检测到可能的分页（当前返回${websites.length}个），尝试获取更多数据...")
+
                 const allWebsites: UmamiWebsite[] = [...websites]
                 let currentPage = 1
-                const pageSize = websites.length // 使用第一次返回的数量作为页面大小
-                
-                // 尝试获取更多页面
-                while (currentPage < 10) { // 限制最多10页
+                const pageSize = websites.length
+
+                while (currentPage < 10) {
                     currentPage++
-                    
                     try {
-                        // 根据Umami API文档尝试正确的分页参数
-                        const pageData = await this.makeRequest(`/api/websites?page=${currentPage}`)
+                        const pageData = await this.makeRequest(`/api/websites?page=${currentPage}&size=${pageSize}`)
                         const pageWebsites = pageData.data || pageData || []
-                        
-                        console.log(`第 ${currentPage} 页返回 ${pageWebsites.length} 个网站`)
-                        
+                        console.log(`获取第${currentPage}页，返回${pageWebsites.length}个网站`)
                         if (pageWebsites.length === 0) {
-                            console.log("没有更多数据，停止分页")
+                            console.log("没有更多数据了")
                             break
                         }
-                        
+
                         allWebsites.push(...pageWebsites)
-                        
-                        // 如果返回的数据少于预期页面大小，说明是最后一页
+
                         if (pageWebsites.length < pageSize) {
-                            console.log("最后一页，停止分页")
+                            console.log("没有更多数据了")
                             break
                         }
-                        
-                        // 添加延迟避免API限制
+
+                        // 等待200ms，避免请求过于频繁
                         await new Promise(resolve => setTimeout(resolve, 200))
-                        
-                    } catch (pageError) {
-                        console.log(`第 ${currentPage} 页获取失败:`, pageError)
+
+                    } catch (error) {
+                        console.error("获取分页数据时出错:", error)
                         break
                     }
                 }
-                
+
                 websites = allWebsites
             }
             
-            console.log(`总共获取到 ${websites.length} 个网站`)
+            console.log(`✅ 总共获取到 ${websites.length} 个网站`)
             return websites
             
         } catch (error) {
-            console.error("获取所有网站数据时出错:", error)
-            // 如果分页获取失败，回退到原始方法
-            console.log("回退到原始获取方法...")
-            return await this.getWebsites()
+            console.error("❌ 获取所有网站数据时出错:", error)
+            if (error instanceof Error) {
+                console.error("错误详情:", error.message)
+                console.error("错误堆栈:", error.stack)
+            }
+            return []
         }
     }
 
