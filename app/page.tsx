@@ -82,6 +82,7 @@ export default function UmamiDashboard() {
     totalCurrentOnline: [] as Array<{ x: number, y: number }>
   })
   const [showConfigOnStart, setShowConfigOnStart] = useState(false)
+  const [autoRefreshTimeoutId, setAutoRefreshTimeoutId] = useState<NodeJS.Timeout | null>(null)
   const loginConfigRef = useRef<LoginConfigDialogRef | null>(null)
   const { toast } = useToast()
 
@@ -90,7 +91,26 @@ export default function UmamiDashboard() {
     return !!(config?.serverUrl?.trim() && config?.username?.trim() && config?.password?.trim())
   }
 
-  const fetchData = async (showToast: boolean = true) => {
+  // 安排下一次自动刷新
+  const scheduleAutoRefresh = () => {
+    // 清除现有的计时器
+    if (autoRefreshTimeoutId) {
+      clearTimeout(autoRefreshTimeoutId)
+      setAutoRefreshTimeoutId(null)
+    }
+
+    // 只有在配置完整且启用自动刷新时才安排
+    if (refreshInterval > 0 && isConfigComplete(config)) {
+      const timeoutId = setTimeout(async () => {
+        await fetchData(false, false) // 自动刷新不显示toast，不重置计时器
+        // 数据获取完成后，安排下一次刷新
+        scheduleAutoRefresh()
+      }, refreshInterval)
+      setAutoRefreshTimeoutId(timeoutId)
+    }
+  }
+
+  const fetchData = async (showToast: boolean = true, resetAutoRefresh: boolean = true) => {
     // 检查配置是否完整
     if (!isConfigComplete(config)) {
       console.log('Configuration incomplete, skipping data fetch')
@@ -170,6 +190,11 @@ export default function UmamiDashboard() {
             description: t('dataFetchSuccess', { count: data.websites.length }),
           })
         }
+
+        // 重置自动刷新计时器（只有在手动刷新时）
+        if (resetAutoRefresh && refreshInterval > 0 && isConfigComplete(config)) {
+          scheduleAutoRefresh()
+        }
       } else {
         // Handle error response
         setStatusMessage(data.message || data.error || t('dataFetchFailed'))
@@ -231,7 +256,7 @@ export default function UmamiDashboard() {
   // 首次加载时检查配置
   useEffect(() => {
     if (config && isConfigComplete(config)) {
-      fetchData(false) // Don't show toast on initial load
+      fetchData(false, false) // Don't show toast on initial load, don't reset auto refresh
       setDataSource("loading")
 
       // 加载历史数据
@@ -249,11 +274,19 @@ export default function UmamiDashboard() {
 
   // 自动刷新逻辑 - 只有配置完整时才启用
   useEffect(() => {
+    // 启动自动刷新
     if (refreshInterval > 0 && isConfigComplete(config)) {
-      const interval = setInterval(() => fetchData(false), refreshInterval) // Don't show toast on auto-refresh
-      return () => clearInterval(interval)
+      scheduleAutoRefresh()
     } else if (!isConfigComplete(config) && refreshInterval > 0) {
       console.log(t('autoRefreshDisabled'))
+    }
+
+    // 清理函数
+    return () => {
+      if (autoRefreshTimeoutId) {
+        clearTimeout(autoRefreshTimeoutId)
+        setAutoRefreshTimeoutId(null)
+      }
     }
   }, [refreshInterval, config, t])
 
@@ -286,7 +319,7 @@ export default function UmamiDashboard() {
   // 重新获取数据当时间范围改变时
   useEffect(() => {
     if (config && isConfigComplete(config)) {
-      fetchData(false) // 时间范围改变时不显示toast
+      fetchData(false, true) // 时间范围改变时不显示toast，但重置自动刷新
     }
   }, [timeRange])
 
@@ -387,7 +420,7 @@ export default function UmamiDashboard() {
     // 配置保存后自动刷新数据
     if (isConfigComplete(newConfig)) {
       setDataSource("loading")
-      fetchData(true)
+      fetchData(true, true) // 显示toast，重置自动刷新
     }
 
     toast({
@@ -541,7 +574,7 @@ export default function UmamiDashboard() {
                 <TooltipTrigger asChild>
                   <div>
                     <Button
-                      onClick={() => fetchData(true)}
+                      onClick={() => fetchData(true, true)}
                       disabled={loading || !configComplete}
                       variant="outline"
                       size="sm"
