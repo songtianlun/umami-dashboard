@@ -457,13 +457,30 @@ export default function UmamiDashboard() {
   const getDataSourceBadge = () => {
     switch (dataSource) {
       case "umami":
-        return { variant: "default" as const, text: t('realtimeData') }
-      case "error":
-        return { variant: "destructive" as const, text: t('connectionFailed') }
+        return {
+          variant: "default" as const,
+          text: loading ? `${t('realtimeData')} • ${t('updating')}` : t('realtimeData')
+        }
       case "not-configured":
-        return { variant: "secondary" as const, text: t('notConfigured') }
+        return {
+          variant: "secondary" as const,
+          text: t('notConfigured')
+        }
+      case "error":
+        return {
+          variant: "destructive" as const,
+          text: t('connectionFailed')
+        }
+      case "loading":
+        return {
+          variant: "outline" as const,
+          text: t('loading')
+        }
       default:
-        return { variant: "secondary" as const, text: t('notConnected') }
+        return {
+          variant: "secondary" as const,
+          text: t('notConnected')
+        }
     }
   }
 
@@ -474,76 +491,70 @@ export default function UmamiDashboard() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Header */}
-          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div className="space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getDataSourceBadge().variant}>
-                    {getDataSourceBadge().text}
-                  </Badge>
-                  {loading && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      {t('updating')}
-                    </div>
-                  )}
-                </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+              <div className="flex items-center gap-2">
+                <Badge variant={getDataSourceBadge().variant}>
+                  {getDataSourceBadge().text}
+                </Badge>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-                <span>{getTimeRangeDescription(timeRange)} 数据汇总</span>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span className="text-xs">
-                    {t('lastUpdated')}: {getRelativeTime(lastUpdated)}
-                    <span className="text-muted-foreground/70 ml-1 hidden sm:inline">
-                      ({lastUpdated.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })})
-                    </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+              <span>{getTimeRangeDescription(timeRange)} {t('dataSummary')}</span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span className="text-xs">
+                  {t('lastUpdated')}: {getRelativeTime(lastUpdated)}
+                  <span className="text-muted-foreground/70 ml-1 hidden sm:inline">
+                    ({lastUpdated.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })})
                   </span>
-                </div>
-                {config && getServerHostname(config.serverUrl) && (
-                  <span className="text-xs hidden md:inline">• {t('server')}: {getServerHostname(config.serverUrl)}</span>
-                )}
+                </span>
               </div>
+              {config && getServerHostname(config.serverUrl) && (
+                <span className="text-xs hidden md:inline">• {t('server')}: {getServerHostname(config.serverUrl)}</span>
+              )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <TimeRangeConfig
-                currentRange={timeRange}
-                onRangeChange={handleTimeRangeChange}
-              />
-              <LanguageConfig />
-              <AutoRefreshConfig
-                currentInterval={refreshInterval}
-                onIntervalChange={handleRefreshIntervalChange}
-              />
-              <LoginConfigDialog ref={loginConfigRef} onConfigSave={handleConfigSave} />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      onClick={() => fetchData(true)}
-                      disabled={loading || !configComplete}
-                      variant="outline"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                    >
-                      <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-                      {loading ? t('refreshing') : t('refreshData')}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                {!configComplete && (
-                  <TooltipContent>
-                    <p>{t('refreshDisabledTooltip')}</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <TimeRangeConfig
+              currentRange={timeRange}
+              onRangeChange={handleTimeRangeChange}
+            />
+            <LanguageConfig />
+            <AutoRefreshConfig
+              currentInterval={refreshInterval}
+              onIntervalChange={handleRefreshIntervalChange}
+            />
+            <LoginConfigDialog ref={loginConfigRef} onConfigSave={handleConfigSave} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    onClick={() => fetchData(true)}
+                    disabled={loading || !configComplete}
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                    {loading ? t('refreshing') : t('refreshData')}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!configComplete && (
+                <TooltipContent>
+                  <p>{t('refreshDisabledTooltip')}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
 
           {/* Status Message */}
