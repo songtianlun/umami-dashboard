@@ -20,6 +20,7 @@ import { useI18n } from "@/components/i18n-provider"
 import { LanguageConfig } from "@/components/language-config"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { TimeRangeConfig, TimeRangeValue, getSavedTimeRange, getTimeRangeTimestamps } from "@/components/time-range-config"
+import { WebsiteTable } from "@/components/website-table"
 
 interface WebsiteStats {
   id: string
@@ -60,9 +61,16 @@ export default function UmamiDashboard() {
   const [initialLoad, setInitialLoad] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [config, setConfig] = useState<LoginConfig | null>(null)
-  const [refreshInterval, setRefreshInterval] = useState(30000) // 30 seconds default
+  const [refreshInterval, setRefreshInterval] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem('umami-refresh-interval')
+      return saved ? parseInt(saved) : 30000 // 默认30秒
+    }
+    return 30000
+  })
   const [dataSource, setDataSource] = useState<"umami" | "error" | "loading" | "not-configured">("not-configured")
   const [statusMessage, setStatusMessage] = useState<string>("")
+  const [timeRange, setTimeRange] = useState<TimeRangeValue>(getSavedTimeRange())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [sortField, setSortField] = useState<SortField>('currentOnline')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -74,7 +82,6 @@ export default function UmamiDashboard() {
     totalCurrentOnline: [] as Array<{ x: number, y: number }>
   })
   const [showConfigOnStart, setShowConfigOnStart] = useState(false)
-  const [timeRange, setTimeRange] = useState<TimeRangeValue>('24h')
   const loginConfigRef = useRef<LoginConfigDialogRef | null>(null)
   const { toast } = useToast()
 
@@ -284,9 +291,16 @@ export default function UmamiDashboard() {
   }, [timeRange])
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    if (seconds < 60) {
+      return `${seconds}${t('seconds')}`
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60)
+      return `${minutes}${t('minute')}${minutes > 1 ? t('minutes') : ''}`
+    } else {
+      const hours = Math.floor(seconds / 3600)
+      const minutes = Math.floor((seconds % 3600) / 60)
+      return `${hours}h ${minutes}m`
+    }
   }
 
   const formatNumber = (num: number) => {
@@ -300,20 +314,21 @@ export default function UmamiDashboard() {
 
   const getRelativeTime = (timestamp: Date) => {
     const now = currentTime.getTime()
-    const diff = now - timestamp.getTime()
-    const seconds = Math.floor(diff / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
+    const time = timestamp.getTime()
+    const diffInSeconds = Math.floor((now - time) / 1000)
 
-    if (seconds < 30) return t('justNow')
-    if (seconds < 60) return t('secondsAgo', { seconds })
-    if (minutes === 1) return t('minuteAgo')
-    if (minutes < 60) return t('minutesAgo', { minutes })
-    if (hours === 1) return t('hourAgo')
-    if (hours < 24) return t('hoursAgo', { hours })
-    if (days === 1) return t('dayAgo')
-    return t('daysAgo', { days })
+    if (diffInSeconds < 60) {
+      return t('justNow')
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return t('minutesAgo', { count: minutes })
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600)
+      return t('hoursAgo', { count: hours })
+    } else {
+      const days = Math.floor(diffInSeconds / 86400)
+      return t('daysAgo', { count: days })
+    }
   }
 
   const getSortFieldLabel = (field: SortField) => {
@@ -653,277 +668,13 @@ export default function UmamiDashboard() {
           )}
 
           {/* Websites Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                {t('detailedWebsiteStats')}
-              </CardTitle>
-              <CardDescription className="text-sm">
-                {t('sortedBy', {
-                  field: getSortFieldLabel(sortField),
-                  direction: t(sortDirection === 'asc' ? 'ascending' : 'descending')
-                })} • {t('totalWebsites', { count: websites.length })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className={`transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                  {/* Mobile Sort Controls */}
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm font-medium">{t('sortBy')}:</span>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={sortField}
-                        onChange={(e) => handleSort(e.target.value as SortField)}
-                        className="text-sm border rounded px-2 py-1 bg-background"
-                      >
-                        <option value="currentOnline">{t('currentOnline')}</option>
-                        <option value="name">{t('websiteName')}</option>
-                        <option value="domain">{t('websiteAddress')}</option>
-                        <option value="pageviews">{t('pageviews')}</option>
-                        <option value="sessions">{t('sessions')}</option>
-                        <option value="visitors">{t('visitors')}</option>
-                        <option value="avgSessionTime">{t('avgAccessTime')}</option>
-                        <option value="bounceRate">{t('bounceRate')}</option>
-                      </select>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                        className="p-2"
-                      >
-                        {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {websites.length === 0 && !loading ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      {t('noWebsiteData')}
-                    </div>
-                  ) : websites.length === 0 && loading ? (
-                    <div className="text-center py-8">
-                      <div className="flex items-center justify-center">
-                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                        {t('loading')}
-                      </div>
-                    </div>
-                  ) : (
-                    websites.map((website) => (
-                      <Card key={website.id} className="p-4 mobile-card">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                              {getUmamiWebsiteUrl(website.id) ? (
-                                <a
-                                  href={getUmamiWebsiteUrl(website.id)!}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-medium text-blue-600 hover:underline truncate"
-                                  title={t('viewInUmami')}
-                                >
-                                  {website.name}
-                                </a>
-                              ) : (
-                                <span className="font-medium truncate">{website.name}</span>
-                              )}
-                            </div>
-                            <Badge
-                              variant={website.currentOnline > 0 ? "default" : "secondary"}
-                              className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
-                            >
-                              {website.currentOnline} {t('online')}
-                            </Badge>
-                          </div>
-                          <div>
-                            <a
-                              href={website.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline text-sm break-all"
-                            >
-                              {website.domain}
-                            </a>
-                          </div>
-                          <div className="mobile-stats-grid">
-                            <div>
-                              <span className="text-muted-foreground">{t('pageviews')}:</span>
-                              <span className="ml-1 font-mono">{formatNumber(website.pageviews)}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t('sessions')}:</span>
-                              <span className="ml-1 font-mono">{formatNumber(website.sessions)}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t('visitors')}:</span>
-                              <span className="ml-1 font-mono">{formatNumber(website.visitors)}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">{t('bounceRate')}:</span>
-                              <span className="ml-1 font-mono">{website.bounceRate.toFixed(1)}%</span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">{t('averageSessionTime')}:</span>
-                              <span className="ml-1 font-mono">{formatTime(website.avgSessionTime)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))
-                  )}
-                </div>
-
-                {/* Desktop Table View */}
-                <div className="hidden md:block rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => handleSort('name')}
-                          >
-                            {t('websiteName')}
-                            {getSortIcon('name')}
-                          </button>
-                        </TableHead>
-                        <TableHead>
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => handleSort('domain')}
-                          >
-                            {t('websiteAddress')}
-                            {getSortIcon('domain')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-center">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
-                            onClick={() => handleSort('currentOnline')}
-                          >
-                            {t('currentOnline')}
-                            {getSortIcon('currentOnline')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                            onClick={() => handleSort('pageviews')}
-                          >
-                            {t('pageviews')}
-                            {getSortIcon('pageviews')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                            onClick={() => handleSort('sessions')}
-                          >
-                            {t('sessions')}
-                            {getSortIcon('sessions')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                            onClick={() => handleSort('visitors')}
-                          >
-                            {t('visitors')}
-                            {getSortIcon('visitors')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                            onClick={() => handleSort('avgSessionTime')}
-                          >
-                            {t('averageSessionTime')}
-                            {getSortIcon('avgSessionTime')}
-                          </button>
-                        </TableHead>
-                        <TableHead className="text-right">
-                          <button
-                            className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
-                            onClick={() => handleSort('bounceRate')}
-                          >
-                            {t('bounceRate')}
-                            {getSortIcon('bounceRate')}
-                          </button>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {websites.length === 0 && !loading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            {t('noWebsiteData')}
-                          </TableCell>
-                        </TableRow>
-                      ) : websites.length === 0 && loading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            <div className="flex items-center justify-center">
-                              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                              {t('loading')}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        websites.map((website) => (
-                          <TableRow key={website.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                                {getUmamiWebsiteUrl(website.id) ? (
-                                  <a
-                                    href={getUmamiWebsiteUrl(website.id)!}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
-                                    title={t('viewInUmami')}
-                                  >
-                                    {website.name}
-                                  </a>
-                                ) : (
-                                  <span>{website.name}</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <a
-                                href={website.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                {website.domain}
-                              </a>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant={website.currentOnline > 0 ? "default" : "secondary"}
-                                className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
-                              >
-                                {website.currentOnline}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-mono">{formatNumber(website.pageviews)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatNumber(website.sessions)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatNumber(website.visitors)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatTime(website.avgSessionTime)}</TableCell>
-                            <TableCell className="text-right font-mono">{website.bounceRate.toFixed(1)}%</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <WebsiteTable
+            websites={websites}
+            loading={loading}
+            getUmamiWebsiteUrl={getUmamiWebsiteUrl}
+            formatNumber={formatNumber}
+            formatTime={formatTime}
+          />
         </div>
 
         {/* Version Info Footer */}

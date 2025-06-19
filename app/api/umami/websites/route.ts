@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get websites list
-        const websites = await umamiApi.getWebsites()
+        const websites = await umamiApi.getAllWebsites()
 
         return NextResponse.json({
             websites: websites.map(site => ({
