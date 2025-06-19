@@ -112,7 +112,7 @@ export class UmamiAPI {
     // 获取所有网站数据 - 根据Umami API文档优化
     async getAllWebsites(): Promise<UmamiWebsite[]> {
         try {
-            console.log("开始获取所有网站数据...")
+            console.log("Start getting all websites...")
             
             // 根据Umami官方API文档，先尝试基础调用
             const data = await this.makeRequest("/api/websites")
@@ -123,19 +123,19 @@ export class UmamiAPI {
             
             if (data.data && Array.isArray(data.data)) {
                 websites = data.data
-                console.log("使用data.data格式，网站数量:", websites.length)
+                console.log("Using data.data format, website count:", websites.length)
             } else if (Array.isArray(data)) {
                 websites = data
-                console.log("使用直接数组格式，网站数量:", websites.length)
+                console.log("Using direct array format, website count:", websites.length)
             } else {
-                console.log("未知的响应格式:", typeof data, data)
+                console.log("Unknown response format:", typeof data, data)
                 websites = []
             }
 
             const possiblePageSizes = [10, 20, 50, 100]
             const needsPagination = possiblePageSizes.includes(websites.length) && websites.length > 0
             if (needsPagination) {
-                console.log("检测到可能的分页（当前返回${websites.length}个），尝试获取更多数据...")
+                console.log(`Detected pagination (current return ${websites.length} websites), try to get more data...`)
 
                 const allWebsites: UmamiWebsite[] = [...websites]
                 let currentPage = 1
@@ -146,16 +146,16 @@ export class UmamiAPI {
                     try {
                         const pageData = await this.makeRequest(`/api/websites?page=${currentPage}&size=${pageSize}`)
                         const pageWebsites = pageData.data || pageData || []
-                        console.log(`获取第${currentPage}页，返回${pageWebsites.length}个网站`)
+                        console.log(`Get Page ${currentPage}, Return ${pageWebsites.length} websites`)
                         if (pageWebsites.length === 0) {
-                            console.log("没有更多数据了")
+                            console.log("No more data")
                             break
                         }
 
                         allWebsites.push(...pageWebsites)
 
                         if (pageWebsites.length < pageSize) {
-                            console.log("没有更多数据了")
+                            console.log("no more data")
                             break
                         }
 
@@ -163,7 +163,7 @@ export class UmamiAPI {
                         await new Promise(resolve => setTimeout(resolve, 200))
 
                     } catch (error) {
-                        console.error("获取分页数据时出错:", error)
+                        console.error("Error getting pagination data:", error)
                         break
                     }
                 }
@@ -171,14 +171,14 @@ export class UmamiAPI {
                 websites = allWebsites
             }
             
-            console.log(`✅ 总共获取到 ${websites.length} 个网站`)
+            console.log(`✅ Total ${websites.length} websites`)
             return websites
             
         } catch (error) {
-            console.error("❌ 获取所有网站数据时出错:", error)
+            console.error("❌ Error getting all websites:", error)
             if (error instanceof Error) {
-                console.error("错误详情:", error.message)
-                console.error("错误堆栈:", error.stack)
+                console.error("Error details:", error.message)
+                console.error("Error stack:", error.stack)
             }
             return []
         }

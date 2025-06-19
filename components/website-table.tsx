@@ -50,9 +50,15 @@ export function WebsiteTable({
   const [sortField, setSortField] = useState<SortField>('currentOnline')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   
-  // 分页状态
+  // 分页状态 - 从localStorage加载页面大小
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('website-table-page-size')
+      return saved ? parseInt(saved) : 20
+    }
+    return 20
+  })
   
   // 过滤和排序数据
   const filteredAndSortedWebsites = useMemo(() => {
@@ -144,8 +150,14 @@ export function WebsiteTable({
   }
   
   const handlePageSizeChange = (size: string) => {
-    setPageSize(parseInt(size))
+    const newSize = parseInt(size)
+    setPageSize(newSize)
     setCurrentPage(1) // 改变页面大小后重置到第一页
+    
+    // 保存到localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('website-table-page-size', size)
+    }
   }
   
   // 获取排序字段标签
@@ -246,23 +258,6 @@ export function WebsiteTable({
             >
               {sortDirection === 'asc' ? '↑' : '↓'}
             </Button>
-            
-            <Label className="text-sm whitespace-nowrap ml-4">页面大小:</Label>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={handlePageSizeChange}
-              disabled={loading}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -493,77 +488,106 @@ export function WebsiteTable({
           </div>
         </div>
 
-        {/* 分页控件 */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-            <div className="text-sm text-muted-foreground">
-              显示 {startItem} 到 {endItem} 项，共 {filteredAndSortedWebsites.length} 个结果
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1 || loading}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1 || loading}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
-              <div className="flex items-center gap-1">
-                {/* 显示页码按钮 */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNumber;
-                  if (totalPages <= 5) {
-                    pageNumber = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNumber = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNumber = totalPages - 4 + i;
-                  } else {
-                    pageNumber = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <Button
-                      key={pageNumber}
-                      variant={currentPage === pageNumber ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(pageNumber)}
-                      disabled={loading}
-                      className="w-8 h-8 p-0"
-                    >
-                      {pageNumber}
-                    </Button>
-                  );
-                })}
+        {/* 分页控件和页面大小设置 */}
+        {filteredAndSortedWebsites.length > 0 && (
+          <div className="flex flex-col gap-4 mt-6">
+            {/* 信息和页面大小控件 */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="text-sm text-muted-foreground">
+                显示 {startItem} 到 {endItem} 项，共 {filteredAndSortedWebsites.length} 个结果
               </div>
               
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages || loading}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages || loading}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
+              {/* 页面大小选择器 */}
+              <div className="flex items-center gap-2">
+                <Label className="text-sm whitespace-nowrap">每页显示:</Label>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={handlePageSizeChange}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="w-16 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">条</span>
+              </div>
             </div>
+            
+            {/* 分页按钮 - 只在有多页时显示 */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1 || loading}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1 || loading}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {/* 显示页码按钮 */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant={currentPage === pageNumber ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNumber)}
+                          disabled={loading}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNumber}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || loading}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages || loading}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
