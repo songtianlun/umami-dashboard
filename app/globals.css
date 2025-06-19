@@ -19,7 +19,7 @@ body {
   }
 
   .mobile-stats-grid {
-    @apply grid grid-cols-2 gap-3 text-sm;
+    @apply grid grid-cols-2 gap-2 text-xs;
   }
 
   /* Ensure buttons are touch-friendly on mobile */
@@ -30,13 +30,28 @@ body {
   /* Optimize text legibility on small screens */
   @media (max-width: 640px) {
     .mobile-text-sm {
-      font-size: 0.875rem;
-      line-height: 1.25rem;
+      font-size: 0.75rem;
+      line-height: 1rem;
     }
 
     .mobile-heading {
-      font-size: 1.5rem;
-      line-height: 2rem;
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    /* Improve button touch targets */
+    button {
+      min-height: 40px;
+    }
+
+    /* Better spacing for mobile cards */
+    .mobile-card {
+      @apply p-3;
+    }
+
+    /* Optimize input fields for mobile */
+    input, select, textarea {
+      font-size: 16px; /* Prevents zoom on iOS */
     }
   }
 
@@ -44,6 +59,36 @@ body {
   .smooth-scroll {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+
+  /* Better mobile table alternative */
+  @media (max-width: 768px) {
+    .mobile-table-card {
+      @apply border rounded-lg p-3 space-y-2 bg-card;
+    }
+    
+    .mobile-table-row {
+      @apply flex justify-between items-center py-1 text-sm;
+    }
+    
+    .mobile-table-label {
+      @apply text-muted-foreground font-medium;
+    }
+    
+    .mobile-table-value {
+      @apply font-mono;
+    }
+  }
+
+  /* Improved mobile pagination */
+  @media (max-width: 640px) {
+    .mobile-pagination {
+      @apply flex items-center justify-center gap-1;
+    }
+    
+    .mobile-pagination button {
+      @apply h-8 w-8 p-0 text-xs;
+    }
   }
 }
 

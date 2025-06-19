@@ -294,7 +294,7 @@ export default function UmamiDashboard() {
     if (seconds < 60) {
       return `${seconds}${t('seconds')}`
     } else if (seconds < 3600) {
-      const minutes = Math.floor(seconds / 60)
+    const minutes = Math.floor(seconds / 60)
       return `${minutes}${t('minute')}${minutes > 1 ? t('minutes') : ''}`
     } else {
       const hours = Math.floor(seconds / 3600)
@@ -492,16 +492,16 @@ export default function UmamiDashboard() {
         <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">{t('title')}</h1>
               <div className="flex items-center gap-2">
-                <Badge variant={getDataSourceBadge().variant}>
+                <Badge variant={getDataSourceBadge().variant} className="text-xs">
                   {getDataSourceBadge().text}
                 </Badge>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-              <span>{getTimeRangeDescription(timeRange)} {t('dataSummary')}</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm">{getTimeRangeDescription(timeRange)} {t('dataSummary')}</span>
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 <span className="text-xs">
@@ -523,38 +523,42 @@ export default function UmamiDashboard() {
           </div>
 
           {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <TimeRangeConfig
-              currentRange={timeRange}
-              onRangeChange={handleTimeRangeChange}
-            />
-            <LanguageConfig />
-            <AutoRefreshConfig
-              currentInterval={refreshInterval}
-              onIntervalChange={handleRefreshIntervalChange}
-            />
-            <LoginConfigDialog ref={loginConfigRef} onConfigSave={handleConfigSave} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    onClick={() => fetchData(true)}
-                    disabled={loading || !configComplete}
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-                    {loading ? t('refreshing') : t('refreshData')}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {!configComplete && (
-                <TooltipContent>
-                  <p>{t('refreshDisabledTooltip')}</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-2 sm:flex-1">
+              <TimeRangeConfig
+                currentRange={timeRange}
+                onRangeChange={handleTimeRangeChange}
+              />
+              <LanguageConfig />
+              <AutoRefreshConfig
+                currentInterval={refreshInterval}
+                onIntervalChange={handleRefreshIntervalChange}
+              />
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+              <LoginConfigDialog ref={loginConfigRef} onConfigSave={handleConfigSave} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      onClick={() => fetchData(true)}
+                      disabled={loading || !configComplete}
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                    >
+                      <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+                      {loading ? t('refreshing') : t('refreshData')}
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {!configComplete && (
+                  <TooltipContent>
+                    <p>{t('refreshDisabledTooltip')}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
           </div>
 
           {/* Status Message */}
@@ -566,20 +570,20 @@ export default function UmamiDashboard() {
           )}
 
           {/* Summary Cards */}
-          <div className={`grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
+          <div className={`grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5 transition-opacity duration-200 ${loading ? "opacity-70" : ""}`}>
             {summary ? (
               <>
-                <Card className="col-span-2 sm:col-span-1 relative">
+                <Card className="col-span-2 lg:col-span-1 relative">
                   <StatCardHistoryChart data={historyData.totalCurrentOnline} />
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('currentOnline')}</CardTitle>
+                    <CardTitle className="text-xs sm:text-sm font-medium">{t('currentOnline')}</CardTitle>
                     <div className="flex items-center">
                       <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{summary.totalCurrentOnline}</div>
                     <p className="text-xs text-muted-foreground">{t('realtimeVisitors')}</p>
                   </CardContent>
                 </Card>
@@ -587,11 +591,11 @@ export default function UmamiDashboard() {
                 <Card className="relative">
                   <StatCardHistoryChart data={historyData.totalPageviews} />
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('totalPageviews')}</CardTitle>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-xs sm:text-sm font-medium">{t('totalPageviews')}</CardTitle>
+                    <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatNumber(summary.totalPageviews)}</div>
                     <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
@@ -599,11 +603,11 @@ export default function UmamiDashboard() {
                 <Card className="relative">
                   <StatCardHistoryChart data={historyData.totalSessions} />
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('totalSessions')}</CardTitle>
-                    <MousePointer className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-xs sm:text-sm font-medium">{t('totalSessions')}</CardTitle>
+                    <MousePointer className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatNumber(summary.totalSessions)}</div>
                     <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
@@ -611,11 +615,11 @@ export default function UmamiDashboard() {
                 <Card className="relative">
                   <StatCardHistoryChart data={historyData.totalVisitors} />
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('totalVisitors')}</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-xs sm:text-sm font-medium">{t('totalVisitors')}</CardTitle>
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatNumber(summary.totalVisitors)}</div>
                     <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
@@ -623,11 +627,11 @@ export default function UmamiDashboard() {
                 <Card className="relative">
                   <StatCardHistoryChart data={historyData.avgSessionTime} />
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('averageSessionTime')}</CardTitle>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-xs sm:text-sm font-medium">{t('averageSessionTime')}</CardTitle>
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatTime(summary.avgSessionTime)}</div>
                     <p className="text-xs text-muted-foreground">{getTimeRangeDescription(timeRange)}</p>
                   </CardContent>
                 </Card>
@@ -639,34 +643,34 @@ export default function UmamiDashboard() {
                   icon={
                     <div className="flex items-center">
                       <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse mr-2" />
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </div>
                   }
                   description={t('realtimeVisitors')}
-                  className="col-span-2 sm:col-span-1"
+                  className="col-span-2 lg:col-span-1"
                 />
 
                 <LoadingCard
                   title={t('totalPageviews')}
-                  icon={<Eye className="h-4 w-4 text-muted-foreground" />}
+                  icon={<Eye className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                   description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('totalSessions')}
-                  icon={<MousePointer className="h-4 w-4 text-muted-foreground" />}
+                  icon={<MousePointer className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                   description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('totalVisitors')}
-                  icon={<Users className="h-4 w-4 text-muted-foreground" />}
+                  icon={<Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                   description={getTimeRangeDescription(timeRange)}
                 />
 
                 <LoadingCard
                   title={t('averageSessionTime')}
-                  icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+                  icon={<Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
                   description={getTimeRangeDescription(timeRange)}
                 />
               </>

@@ -193,9 +193,9 @@ export function WebsiteTable({
       </CardHeader>
       <CardContent>
         {/* 搜索和控制栏 */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6">
           {/* 搜索框 */}
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -222,42 +222,45 @@ export function WebsiteTable({
               onClick={handleSearch} 
               disabled={loading}
               variant="outline"
+              className="w-full sm:w-auto"
             >
               {t('searchButton')}
             </Button>
           </div>
 
-          {/* 排序和页面大小控件 */}
-          <div className="flex items-center gap-2">
+          {/* 排序控件 */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <Label className="text-sm whitespace-nowrap">{t('sortBy')}:</Label>
-            <Select
-              value={sortField}
-              onValueChange={(value: SortField) => handleSort(value)}
-              disabled={loading}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">{t('websiteName')}</SelectItem>
-                <SelectItem value="domain">{t('websiteAddress')}</SelectItem>
-                <SelectItem value="currentOnline">{t('currentOnline')}</SelectItem>
-                <SelectItem value="pageviews">{t('pageviews')}</SelectItem>
-                <SelectItem value="sessions">{t('sessions')}</SelectItem>
-                <SelectItem value="visitors">{t('visitors')}</SelectItem>
-                <SelectItem value="avgSessionTime">{t('avgAccessTime')}</SelectItem>
-                <SelectItem value="bounceRate">{t('bounceRate')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              disabled={loading}
-              className="px-3"
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </Button>
+            <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+              <Select
+                value={sortField}
+                onValueChange={(value: SortField) => handleSort(value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="flex-1 sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">{t('websiteName')}</SelectItem>
+                  <SelectItem value="domain">{t('websiteAddress')}</SelectItem>
+                  <SelectItem value="currentOnline">{t('currentOnline')}</SelectItem>
+                  <SelectItem value="pageviews">{t('pageviews')}</SelectItem>
+                  <SelectItem value="sessions">{t('sessions')}</SelectItem>
+                  <SelectItem value="visitors">{t('visitors')}</SelectItem>
+                  <SelectItem value="avgSessionTime">{t('avgAccessTime')}</SelectItem>
+                  <SelectItem value="bounceRate">{t('bounceRate')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                disabled={loading}
+                className="px-3 min-w-[44px]"
+              >
+                {sortDirection === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -277,28 +280,28 @@ export function WebsiteTable({
               </div>
             ) : (
               paginatedWebsites.map((website) => (
-                <Card key={website.id} className="p-4 mobile-card">
+                <Card key={website.id} className="p-3 sm:p-4 mobile-card">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="h-2 w-2 bg-blue-500 rounded-full flex-shrink-0" />
                         {getUmamiWebsiteUrl && getUmamiWebsiteUrl(website.id) ? (
                           <a
                             href={getUmamiWebsiteUrl(website.id)!}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium text-blue-600 hover:underline truncate"
+                            className="font-medium text-blue-600 hover:underline truncate text-sm"
                             title={t('viewInUmami')}
                           >
                             {website.name}
                           </a>
                         ) : (
-                          <span className="font-medium truncate">{website.name}</span>
+                          <span className="font-medium truncate text-sm">{website.name}</span>
                         )}
                       </div>
                       <Badge
                         variant={website.currentOnline > 0 ? "default" : "secondary"}
-                        className={website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}
+                        className={`text-xs flex-shrink-0 ${website.currentOnline > 0 ? "bg-green-500 hover:bg-green-600" : ""}`}
                       >
                         {website.currentOnline} {t('online')}
                       </Badge>
@@ -308,31 +311,31 @@ export function WebsiteTable({
                         href={website.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm break-all"
+                        className="text-blue-600 hover:underline text-xs break-all"
                       >
                         {website.domain}
                       </a>
                     </div>
-                    <div className="mobile-stats-grid">
-                      <div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('pageviews')}:</span>
-                        <span className="ml-1 font-mono">{formatNumber(website.pageviews)}</span>
+                        <span className="font-mono">{formatNumber(website.pageviews)}</span>
                       </div>
-                      <div>
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('sessions')}:</span>
-                        <span className="ml-1 font-mono">{formatNumber(website.sessions)}</span>
+                        <span className="font-mono">{formatNumber(website.sessions)}</span>
                       </div>
-                      <div>
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('visitors')}:</span>
-                        <span className="ml-1 font-mono">{formatNumber(website.visitors)}</span>
+                        <span className="font-mono">{formatNumber(website.visitors)}</span>
                       </div>
-                      <div>
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('bounceRate')}:</span>
-                        <span className="ml-1 font-mono">{website.bounceRate.toFixed(1)}%</span>
+                        <span className="font-mono">{website.bounceRate.toFixed(1)}%</span>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-2 flex justify-between">
                         <span className="text-muted-foreground">{t('averageSessionTime')}:</span>
-                        <span className="ml-1 font-mono">{formatTime(website.avgSessionTime)}</span>
+                        <span className="font-mono">{formatTime(website.avgSessionTime)}</span>
                       </div>
                     </div>
                   </div>
@@ -492,8 +495,8 @@ export function WebsiteTable({
         {filteredAndSortedWebsites.length > 0 && (
           <div className="flex flex-col gap-4 mt-6">
             {/* 信息和页面大小控件 */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs sm:text-sm text-muted-foreground">
                 {t('showingItems', { 
                   start: startItem, 
                   end: endItem, 
@@ -503,7 +506,7 @@ export function WebsiteTable({
               
               {/* 页面大小选择器 */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm whitespace-nowrap">{t('itemsPerPage')}</Label>
+                <Label className="text-xs sm:text-sm whitespace-nowrap">{t('itemsPerPage')}</Label>
                 <Select
                   value={pageSize.toString()}
                   onValueChange={handlePageSizeChange}
@@ -519,29 +522,31 @@ export function WebsiteTable({
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">{t('items')}</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">{t('items')}</span>
               </div>
             </div>
             
             {/* 分页按钮 - 只在有多页时显示 */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(1)}
                     disabled={currentPage === 1 || loading}
+                    className="h-8 w-8 p-0 sm:h-9 sm:w-9"
                   >
-                    <ChevronsLeft className="h-4 w-4" />
+                    <ChevronsLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1 || loading}
+                    className="h-8 w-8 p-0 sm:h-9 sm:w-9"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   
                   <div className="flex items-center gap-1">
@@ -565,7 +570,7 @@ export function WebsiteTable({
                           size="sm"
                           onClick={() => handlePageChange(pageNumber)}
                           disabled={loading}
-                          className="w-8 h-8 p-0"
+                          className="h-8 w-8 p-0 text-xs sm:h-9 sm:w-9 sm:text-sm"
                         >
                           {pageNumber}
                         </Button>
@@ -578,16 +583,18 @@ export function WebsiteTable({
                     size="sm"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || loading}
+                    className="h-8 w-8 p-0 sm:h-9 sm:w-9"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(totalPages)}
                     disabled={currentPage === totalPages || loading}
+                    className="h-8 w-8 p-0 sm:h-9 sm:w-9"
                   >
-                    <ChevronsRight className="h-4 w-4" />
+                    <ChevronsRight className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
               </div>
