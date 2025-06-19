@@ -26,7 +26,8 @@ export function getVersionInfo(): VersionInfo {
 // 格式化版本信息显示
 export function formatVersionInfo(): string {
     const versionInfo = getVersionInfo();
-    return `${versionInfo.version} / ${versionInfo.buildTime}`;
+    // return `${versionInfo.version} / ${versionInfo.buildTime}`;
+    return `${versionInfo.version}`;
 }
 
 // 获取版权年份范围
