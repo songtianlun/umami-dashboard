@@ -194,50 +194,123 @@ export function WebsiteTable({
       <CardContent>
         {/* 搜索和控制栏 */}
         <div className="flex flex-col gap-4 mb-6">
-          {/* 搜索框 */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('searchPlaceholder')}
-                value={localSearchTerm}
-                onChange={(e) => setLocalSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={loading}
-                className="pl-9 pr-9"
-              />
-              {localSearchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSearchClear}
+          {/* 移动端：垂直布局 */}
+          <div className="flex flex-col gap-4 md:hidden">
+            {/* 搜索框 */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('searchPlaceholder')}
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   disabled={loading}
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+                  className="pl-9 pr-9"
+                />
+                {localSearchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSearchClear}
+                    disabled={loading}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              <Button 
+                onClick={handleSearch} 
+                disabled={loading}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {t('searchButton')}
+              </Button>
             </div>
-            <Button 
-              onClick={handleSearch} 
-              disabled={loading}
-              variant="outline"
-              className="w-full sm:w-auto"
-            >
-              {t('searchButton')}
-            </Button>
+
+            {/* 排序控件 */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              <Label className="text-sm whitespace-nowrap">{t('sortBy')}:</Label>
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <Select
+                  value={sortField}
+                  onValueChange={(value: SortField) => handleSort(value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="flex-1 sm:w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">{t('websiteName')}</SelectItem>
+                    <SelectItem value="domain">{t('websiteAddress')}</SelectItem>
+                    <SelectItem value="currentOnline">{t('currentOnline')}</SelectItem>
+                    <SelectItem value="pageviews">{t('pageviews')}</SelectItem>
+                    <SelectItem value="sessions">{t('sessions')}</SelectItem>
+                    <SelectItem value="visitors">{t('visitors')}</SelectItem>
+                    <SelectItem value="avgSessionTime">{t('avgAccessTime')}</SelectItem>
+                    <SelectItem value="bounceRate">{t('bounceRate')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                  disabled={loading}
+                  className="px-3 min-w-[44px]"
+                >
+                  {sortDirection === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
+            </div>
           </div>
 
-          {/* 排序控件 */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <Label className="text-sm whitespace-nowrap">{t('sortBy')}:</Label>
-            <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+          {/* 桌面端：水平布局 */}
+          <div className="hidden md:flex md:items-center md:gap-4">
+            {/* 搜索框 */}
+            <div className="flex items-center gap-2 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('searchPlaceholder')}
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={loading}
+                  className="pl-9 pr-9"
+                />
+                {localSearchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSearchClear}
+                    disabled={loading}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              <Button 
+                onClick={handleSearch} 
+                disabled={loading}
+                variant="outline"
+                size="sm"
+              >
+                {t('searchButton')}
+              </Button>
+            </div>
+
+            {/* 排序控件 */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm whitespace-nowrap">{t('sortBy')}:</Label>
               <Select
                 value={sortField}
                 onValueChange={(value: SortField) => handleSort(value)}
                 disabled={loading}
               >
-                <SelectTrigger className="flex-1 sm:w-40">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
