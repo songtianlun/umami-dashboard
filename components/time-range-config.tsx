@@ -12,12 +12,13 @@ import { Button } from "@/components/ui/button"
 import { Clock } from "lucide-react"
 import { useI18n } from "@/components/i18n-provider"
 import { useToast } from "@/hooks/use-toast"
+import { TranslationKey } from "@/lib/translations"
 
 export type TimeRangeValue = '24h' | 'today' | 'week' | '7d' | 'month' | '30d'
 
 export interface TimeRangeOption {
     value: TimeRangeValue
-    labelKey: string
+    labelKey: TranslationKey
     hours?: number
     isCurrentPeriod?: boolean
 }
@@ -58,7 +59,7 @@ export function TimeRangeConfig({ currentRange, onRangeChange, trigger }: TimeRa
 
     return (
         <Select value={currentRange} onValueChange={handleRangeChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
                 {trigger || (
                     <>
                         <Clock className="h-4 w-4 mr-2" />

@@ -31,7 +31,7 @@ export function LanguageConfig() {
 
   return (
     <Select value={locale} onValueChange={handleLanguageChange}>
-      <SelectTrigger className="w-auto min-w-[120px]">
+      <SelectTrigger className="w-full sm:w-auto sm:min-w-[120px]">
         <div className="flex items-center gap-2">
           <Languages className="h-4 w-4" />
           <SelectValue />
