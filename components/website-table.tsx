@@ -199,7 +199,7 @@ export function WebsiteTable({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="搜索网站名称或域名..."
+                placeholder={t('searchPlaceholder')}
                 value={localSearchTerm}
                 onChange={(e) => setLocalSearchTerm(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -223,7 +223,7 @@ export function WebsiteTable({
               disabled={loading}
               variant="outline"
             >
-              搜索
+              {t('searchButton')}
             </Button>
           </div>
 
@@ -424,7 +424,7 @@ export function WebsiteTable({
                 {paginatedWebsites.length === 0 && !loading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? '没有找到匹配的结果' : t('noWebsiteData')}
+                      {searchTerm ? t('noMatchingResults') : t('noWebsiteData')}
                     </TableCell>
                   </TableRow>
                 ) : paginatedWebsites.length === 0 && loading ? (
@@ -494,12 +494,16 @@ export function WebsiteTable({
             {/* 信息和页面大小控件 */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground">
-                显示 {startItem} 到 {endItem} 项，共 {filteredAndSortedWebsites.length} 个结果
+                {t('showingItems', { 
+                  start: startItem, 
+                  end: endItem, 
+                  total: filteredAndSortedWebsites.length 
+                })}
               </div>
               
               {/* 页面大小选择器 */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm whitespace-nowrap">每页显示:</Label>
+                <Label className="text-sm whitespace-nowrap">{t('itemsPerPage')}</Label>
                 <Select
                   value={pageSize.toString()}
                   onValueChange={handlePageSizeChange}
@@ -515,7 +519,7 @@ export function WebsiteTable({
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">条</span>
+                <span className="text-sm text-muted-foreground">{t('items')}</span>
               </div>
             </div>
             

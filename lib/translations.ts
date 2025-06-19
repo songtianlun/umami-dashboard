@@ -201,6 +201,14 @@ export const translations = {
 
     // 详细统计
     detailedWebsiteStats: 'Website Details',
+
+    // 分页控件
+    showingItems: 'Showing {start} to {end} of {total} results',
+    itemsPerPage: 'Per page:',
+    items: 'items',
+    noMatchingResults: 'No matching results found',
+    searchPlaceholder: 'Search by name or domain...',
+    searchButton: 'Search',
   },
   zh: {
     // 网站标题和描述
@@ -402,6 +410,14 @@ export const translations = {
 
     // 详细统计
     detailedWebsiteStats: '网站详细统计',
+
+    // 分页控件
+    showingItems: '显示 {start} 到 {end} 项，共 {total} 个结果',
+    itemsPerPage: '每页显示:',
+    items: '条',
+    noMatchingResults: '没有找到匹配的结果',
+    searchPlaceholder: '搜索网站名称或域名...',
+    searchButton: '搜索',
   }
 }
 
