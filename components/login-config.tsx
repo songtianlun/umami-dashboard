@@ -15,6 +15,7 @@ interface LoginConfig {
     serverUrl: string
     username: string
     password: string
+    serverAlias?: string
 }
 
 interface LoginConfigProps {
@@ -36,6 +37,7 @@ const getConfigFromEnv = async (): Promise<Partial<LoginConfig>> => {
                 serverUrl: envConfig.serverUrl || "",
                 username: envConfig.username || "",
                 password: envConfig.password || "",
+                serverAlias: envConfig.serverAlias || "",
             }
         }
     } catch (error) {
@@ -65,6 +67,7 @@ const getFullConfig = async (): Promise<LoginConfig> => {
         serverUrl: envConfig.serverUrl || "",
         username: envConfig.username || "",
         password: envConfig.password || "",
+        serverAlias: envConfig.serverAlias || "",
     }
 }
 
@@ -75,6 +78,7 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
             serverUrl: "",
             username: "",
             password: "",
+            serverAlias: "",
         })
         const [isOpen, setIsOpen] = useState(false)
         const [testing, setTesting] = useState(false)
@@ -94,7 +98,7 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
 
             // 检查环境变量是否存在
             getConfigFromEnv().then(envConfig => {
-                const hasAnyEnvConfig = !!(envConfig.serverUrl || envConfig.username || envConfig.password)
+                const hasAnyEnvConfig = !!(envConfig.serverUrl || envConfig.username || envConfig.password || envConfig.serverAlias)
                 setHasEnvConfig(hasAnyEnvConfig)
             })
         }, [])
@@ -188,11 +192,12 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
                 // 尝试从环境变量读取配置
                 const envConfig = await getConfigFromEnv()
 
-                if (envConfig.serverUrl || envConfig.username || envConfig.password) {
+                if (envConfig.serverUrl || envConfig.username || envConfig.password || envConfig.serverAlias) {
                     setConfig({
                         serverUrl: envConfig.serverUrl || "",
                         username: envConfig.username || "",
                         password: envConfig.password || "",
+                        serverAlias: envConfig.serverAlias || "",
                     })
                     toast({
                         title: t('configurationReset'),
@@ -203,6 +208,7 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
                         serverUrl: "",
                         username: "",
                         password: "",
+                        serverAlias: "",
                     })
                     toast({
                         title: t('configurationReset'),
@@ -283,6 +289,19 @@ export const LoginConfigDialog = forwardRef<LoginConfigDialogRef, LoginConfigPro
                                         value={config.password}
                                         onChange={(e) => handleInputChange("password", e.target.value)}
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="serverAlias">{t('serverAlias')}</Label>
+                                    <Input
+                                        id="serverAlias"
+                                        placeholder={t('serverAliasPlaceholder')}
+                                        value={config.serverAlias || ""}
+                                        onChange={(e) => handleInputChange("serverAlias", e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        {t('serverAliasDescription')}
+                                    </p>
                                 </div>
 
                                 <div className="flex gap-2 pt-4">

@@ -47,6 +47,7 @@ interface LoginConfig {
   serverUrl: string
   username: string
   password: string
+  serverAlias?: string
 }
 
 type SortField = 'name' | 'domain' | 'currentOnline' | 'pageviews' | 'sessions' | 'visitors' | 'avgSessionTime' | 'bounceRate'
@@ -446,7 +447,10 @@ export default function UmamiDashboard() {
   const getUmamiWebsiteUrl = (websiteId: string) => {
     if (config?.serverUrl) {
       try {
-        const baseUrl = config.serverUrl.replace(/\/+$/, '') // 去除末尾斜杠
+        // 如果配置了服务器别名，优先使用别名
+        const baseUrl = config.serverAlias && config.serverAlias.trim() 
+          ? config.serverAlias.replace(/\/+$/, '') // 去除末尾斜杠
+          : config.serverUrl.replace(/\/+$/, '') // 去除末尾斜杠
         return `${baseUrl}/websites/${websiteId}`
       } catch (error) {
         console.error('Error generating Umami URL:', error)

@@ -6,6 +6,7 @@ export async function GET() {
             serverUrl: process.env.UMAMI_SERVER_URL || "",
             username: process.env.UMAMI_USERNAME || "",
             password: process.env.UMAMI_PASSWORD || "",
+            serverAlias: process.env.UMAMI_SERVER_ALIAS || "",
         }
 
         return NextResponse.json(config)
