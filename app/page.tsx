@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
+import { RefreshCw, Globe, Users, Eye, Clock, MousePointer, TrendingUp, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown, Github } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LoginConfigDialog, getFullConfig, LoginConfigDialogRef } from "@/components/login-config"
 import { AutoRefreshConfig } from "@/components/auto-refresh-config"
@@ -747,9 +747,18 @@ export default function UmamiDashboard() {
                 </div>
               </div>
               
-              {/* 右侧：版权信息 */}
-              <div className="text-xs text-muted-foreground">
+              {/* 右侧：版权信息与链接 */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>© {getCopyrightYears()} • All rights reserved</span>
+                <a 
+                  href="https://github.com/songtianlun/umami-dashboard" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <Github className="h-3 w-3" />
+                  <span className="hidden sm:inline">GitHub</span>
+                </a>
               </div>
             </div>
           </div>
