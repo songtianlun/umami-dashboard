@@ -188,3 +188,13 @@ MIT License
 ## Contributing
 
 Issues and Pull Requests are welcome! 
+
+## Star History
+
+<a href="https://www.star-history.com/#songtianlun/umami-dashboard&Timeline">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=songtianlun/umami-dashboard&type=Timeline&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=songtianlun/umami-dashboard&type=Timeline" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=songtianlun/umami-dashboard&type=Timeline" />
+ </picture>
+</a>
