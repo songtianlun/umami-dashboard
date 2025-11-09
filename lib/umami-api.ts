@@ -13,12 +13,18 @@ interface UmamiWebsite {
 }
 
 interface UmamiStats {
-    pageviews: { value: number } | number
-    uniques: { value: number } | number
-    bounces: { value: number } | number
-    totaltime: { value: number } | number
-    visitors?: { value: number } | number
-    sessions?: any // 支持不同格式的sessions数据
+    // 兼容多个版本的 Umami API 数据类型:
+    // - 旧版本 (2.x): 返回 number 类型
+    // - 新版本 (3.0+): 返回 string 类型
+    // - 某些版本: 返回对象 {value: number} 或 {total: number}
+    pageviews: number | string | { value: number | string } | { total: number | string }
+    uniques?: number | string | { value: number | string } | { total: number | string }
+    visitors?: number | string | { value: number | string } | { total: number | string }
+    bounces: number | string | { value: number | string } | { total: number | string }
+    totaltime: number | string | { value: number | string } | { total: number | string }
+    visits?: number | string | { value: number | string } | { total: number | string } // Umami 3.0+
+    sessions?: any // 支持不同格式的sessions数据（可能是数组或数字）
+    comparison?: any // 比较数据（某些版本包含）
     [key: string]: any // 支持其他可能的属性
 }
 
@@ -36,6 +42,50 @@ export class UmamiAPI {
 
     private get baseUrl() {
         return this.config.serverUrl.replace(/\/$/, "")
+    }
+
+    /**
+     * 安全地将 Umami API 返回的值转换为数字
+     * 兼容多个版本的 Umami API：
+     * - 旧版本 (2.x): 返回数字类型 (例如: 123)
+     * - 新版本 (3.0+): 返回字符串类型 (例如: "123")
+     * - 某些版本: 返回对象类型 (例如: {value: 123} 或 {total: 123})
+     *
+     * @example
+     * safeParseNumber(123)              // => 123 (旧版本)
+     * safeParseNumber("456")            // => 456 (Umami 3.0+)
+     * safeParseNumber({value: 789})     // => 789 (对象格式)
+     * safeParseNumber(null)             // => 0
+     * safeParseNumber(undefined)        // => 0
+     */
+    private safeParseNumber(value: any): number {
+        // 处理 null/undefined
+        if (value === null || value === undefined) {
+            return 0
+        }
+
+        // 如果是对象，尝试提取 value 或 total 字段
+        if (typeof value === 'object' && value !== null) {
+            const extracted = value.value ?? value.total ?? value.count
+            if (extracted !== undefined) {
+                return this.safeParseNumber(extracted)
+            }
+            return 0
+        }
+
+        // 如果是字符串，转换为数字
+        if (typeof value === 'string') {
+            const parsed = parseInt(value, 10)
+            return isNaN(parsed) ? 0 : parsed
+        }
+
+        // 如果已经是数字，直接返回
+        if (typeof value === 'number') {
+            return isNaN(value) ? 0 : value
+        }
+
+        // 其他情况返回 0
+        return 0
     }
 
     async authenticate(): Promise<boolean> {
@@ -407,54 +457,39 @@ export class UmamiAPI {
                 ])
 
                 if (stats) {
-                    // More flexible handling of stats data structure
+                    // 使用统一的方法处理不同版本的数据结构
+                    // 兼容 Umami 2.x (数字), 3.0+ (字符串), 和其他版本 (对象)
                     let pageviews = 0
                     let visitors = 0
                     let bounces = 0
                     let totaltime = 0
                     let sessions = 0
 
-                    // Handle different possible data structures
-                    if (stats.pageviews) {
-                        pageviews = typeof stats.pageviews === 'object' && stats.pageviews !== null
-                            ? (stats.pageviews as any).value || (stats.pageviews as any).total || 0
-                            : stats.pageviews as number
-                    }
+                    // 解析页面浏览量
+                    pageviews = this.safeParseNumber(stats.pageviews)
 
-                    if (stats.uniques) {
-                        visitors = typeof stats.uniques === 'object' && stats.uniques !== null
-                            ? (stats.uniques as any).value || (stats.uniques as any).total || 0
-                            : stats.uniques as number
-                    } else if (stats.visitors) {
-                        visitors = typeof stats.visitors === 'object' && stats.visitors !== null
-                            ? (stats.visitors as any).value || (stats.visitors as any).total || 0
-                            : stats.visitors as number
-                    }
+                    // 解析访客数 - 尝试多个字段名
+                    visitors = this.safeParseNumber(stats.uniques || stats.visitors)
 
-                    if (stats.bounces) {
-                        bounces = typeof stats.bounces === 'object' && stats.bounces !== null
-                            ? (stats.bounces as any).value || (stats.bounces as any).total || 0
-                            : stats.bounces as number
-                    }
+                    // 解析跳出次数
+                    bounces = this.safeParseNumber(stats.bounces)
 
-                    if (stats.totaltime) {
-                        totaltime = typeof stats.totaltime === 'object' && stats.totaltime !== null
-                            ? (stats.totaltime as any).value || (stats.totaltime as any).total || 0
-                            : stats.totaltime as number
-                    }
+                    // 解析总时长
+                    totaltime = this.safeParseNumber(stats.totaltime)
 
-                    // Handle sessions data
-                    if (stats.sessions) {
+                    // 解析会话数 - Umami 3.0 使用 'visits'，旧版本使用 'sessions'
+                    if (stats.visits) {
+                        sessions = this.safeParseNumber(stats.visits)
+                    } else if (stats.sessions) {
+                        // 处理数组类型的 sessions（某些版本）
                         if (Array.isArray(stats.sessions)) {
                             sessions = stats.sessions.length
-                        } else if (typeof stats.sessions === 'object') {
-                            sessions = stats.sessions.value || stats.sessions.total || stats.sessions.count || 0
                         } else {
-                            sessions = stats.sessions
+                            sessions = this.safeParseNumber(stats.sessions)
                         }
                     } else {
-                        // Fallback: estimate sessions from pageviews (typically sessions < pageviews)
-                        sessions = Math.max(1, Math.floor(pageviews * 0.7)) // Rough estimation
+                        // 后备方案: 从页面浏览量估算会话数
+                        sessions = Math.max(1, Math.floor(pageviews * 0.7))
                     }
 
                     // Calculate average session time (in seconds)

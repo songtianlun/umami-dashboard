@@ -338,12 +338,24 @@ export default function UmamiDashboard() {
   }
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M'
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K'
+    // 处理无效值：NaN, Infinity, 或负数
+    if (typeof num !== 'number' || !isFinite(num)) {
+      return '0'
     }
-    return num.toString()
+
+    // 确保是非负数
+    const absNum = Math.abs(num)
+
+    // 处理十亿级别
+    if (absNum >= 1000000000) {
+      return (absNum / 1000000000).toFixed(1) + 'B'
+    } else if (absNum >= 1000000) {
+      return (absNum / 1000000).toFixed(1) + 'M'
+    } else if (absNum >= 1000) {
+      return (absNum / 1000).toFixed(1) + 'K'
+    }
+
+    return Math.floor(absNum).toString()
   }
 
   const getRelativeTime = (timestamp: Date) => {
