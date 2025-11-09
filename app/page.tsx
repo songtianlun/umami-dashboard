@@ -18,6 +18,7 @@ import { LoadingCard } from "@/components/loading-card"
 import { formatVersionInfo, getCopyrightYears } from "@/lib/version"
 import { useI18n } from "@/components/i18n-provider"
 import { LanguageConfig } from "@/components/language-config"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { TimeRangeConfig, TimeRangeValue, getSavedTimeRange, getTimeRangeTimestamps } from "@/components/time-range-config"
 import { WebsiteTable } from "@/components/website-table"
@@ -579,6 +580,7 @@ export default function UmamiDashboard() {
                 onRangeChange={handleTimeRangeChange}
               />
               <LanguageConfig />
+              <ThemeToggle />
               <AutoRefreshConfig
                 currentInterval={refreshInterval}
                 onIntervalChange={handleRefreshIntervalChange}

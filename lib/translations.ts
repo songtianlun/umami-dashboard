@@ -177,6 +177,14 @@ export const translations = {
     chinese: '简体中文',
     selectLanguage: 'Select Language',
 
+    // 主题设置
+    themeSettings: 'Theme',
+    theme: 'Theme',
+    lightMode: 'Light',
+    darkMode: 'Dark',
+    systemMode: 'System',
+    selectTheme: 'Select Theme',
+
     // 时间相关
     justNow: 'Just now',
     secondsAgo: '{seconds}s ago',
@@ -393,6 +401,14 @@ export const translations = {
     english: 'English',
     chinese: '简体中文',
     selectLanguage: '选择语言',
+
+    // 主题设置
+    themeSettings: '主题设置',
+    theme: '主题',
+    lightMode: '浅色',
+    darkMode: '深色',
+    systemMode: '跟随系统',
+    selectTheme: '选择主题',
 
     // 时间相关
     justNow: '刚刚',
