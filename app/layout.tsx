@@ -20,6 +20,8 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <Analytics />
+        {/* Privacy-friendly analytics by Plausible */}
+	<script defer data-domain="ud.frytea.com" src="https://plausible.frytea.com/js/script.js"></script>
       </head>
       <body>
         <I18nProvider>
