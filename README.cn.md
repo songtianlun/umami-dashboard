@@ -24,6 +24,22 @@ docker run -p 3000:3000 songtianlun/umami-dashboard:latest
 
 然后访问 [http://localhost:3000](http://localhost:3000) 即可开始使用。
 
+## 支持的架构
+
+Docker 镜像支持多种架构，实现最大兼容性：
+
+| 架构 | 状态 | 示例设备 |
+|------|------|---------|
+| `linux/amd64` | ✅ | Intel/AMD 64位服务器、大多数PC |
+| `linux/arm64` | ✅ | Apple Silicon (M1/M2/M3)、AWS Graviton、树莓派 4/5 (64位) |
+| `linux/arm/v7` | ✅ | 树莓派 2/3、ARM 32位设备 |
+
+Docker 会自动拉取适合你平台的正确镜像。你可以验证架构支持：
+
+```bash
+docker manifest inspect songtianlun/umami-dashboard:latest | grep architecture
+```
+
 ## 环境变量配置
 
 为了更好的部署体验，本应用支持通过环境变量预设配置信息。配置获取优先级如下：
