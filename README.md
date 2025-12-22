@@ -24,6 +24,22 @@ docker run -p 3000:3000 songtianlun/umami-dashboard:latest
 
 Then visit [http://localhost:3000](http://localhost:3000) to start using the dashboard.
 
+## Supported Architectures
+
+The Docker image supports multiple architectures for maximum compatibility:
+
+| Architecture | Status | Example Devices |
+|--------------|--------|-----------------|
+| `linux/amd64` | ✅ | Intel/AMD 64-bit servers, most PCs |
+| `linux/arm64` | ✅ | Apple Silicon (M1/M2/M3), AWS Graviton, Raspberry Pi 4/5 (64-bit) |
+| `linux/arm/v7` | ✅ | Raspberry Pi 2/3, ARM 32-bit devices |
+
+Docker will automatically pull the correct image for your platform. You can verify the architecture support:
+
+```bash
+docker manifest inspect songtianlun/umami-dashboard:latest | grep architecture
+```
+
 ## Environment Variable Configuration
 
 For better deployment experience, this application supports pre-setting configuration through environment variables. Configuration priority is as follows:
