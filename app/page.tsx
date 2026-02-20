@@ -330,7 +330,8 @@ export default function UmamiDashboard() {
       return `${seconds}${t('seconds')}`
     } else if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60)
-      return `${minutes}${t('minute')}${minutes > 1 ? t('minutes') : ''}`
+      const minutesLabel = minutes === 1 ? t('minute') : t('minutes')
+      return `${minutes}${minutesLabel}`
     } else {
       const hours = Math.floor(seconds / 3600)
       const minutes = Math.floor((seconds % 3600) / 60)
@@ -368,13 +369,13 @@ export default function UmamiDashboard() {
       return t('justNow')
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60)
-      return t('minutesAgo', { count: minutes })
+      return t('minutesAgo', { minutes })
     } else if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600)
-      return t('hoursAgo', { count: hours })
+      return t('hoursAgo', { hours })
     } else {
       const days = Math.floor(diffInSeconds / 86400)
-      return t('daysAgo', { count: days })
+      return t('daysAgo', { days })
     }
   }
 
